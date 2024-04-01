@@ -24,7 +24,10 @@ pip install -r requirements.txt &&\
 
 
 #Install Ollama
-curl -fsSL https://ollama.com/install.sh | sh
+curl -fsSL https://ollama.com/install.sh | sh &&\
+ollama pull llama2 &&\
+ollama pull llava &&\
+ollama pull gemma:2b
 
 # Make run_app.sh executable
 chmod +x run_app.sh
