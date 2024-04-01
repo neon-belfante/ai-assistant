@@ -3,7 +3,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GdkPixbuf
 import os
 from setup import *
-from imageGenerator import imageGenerator
+# from imageGenerator import imageGenerator
 from textGenerator import textGenerator
 from ellaAssistant import ella
 from voiceGenerator import voiceGeneratorSpeecht5

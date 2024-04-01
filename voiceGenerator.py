@@ -1,7 +1,7 @@
-import sys
-sys.path.append('/home/neon/bark')
+# import sys
+# sys.path.append('/home/neon/bark')
 
-from bark import SAMPLE_RATE, generate_audio, preload_models
+# from bark import SAMPLE_RATE, generate_audio, preload_models
 from scipy.io.wavfile import write as write_wav
 from IPython.display import Audio
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
@@ -26,19 +26,19 @@ class voiceGeneratorGtts:
         print(f"Ended voice generator: {datetime.datetime.now()}")
         return [self.savePath]
 
-class voiceGeneratorBark:
-    def __init__(self):
-        self.savePath = 'bark_generation.wav'
-        os.environ["SUNO_OFFLOAD_CPU"] = "True"
-        os.environ["SUNO_USE_SMALL_MODELS"] = "True"
-        preload_models()
+# class voiceGeneratorBark:
+#     def __init__(self):
+#         self.savePath = 'bark_generation.wav'
+#         os.environ["SUNO_OFFLOAD_CPU"] = "True"
+#         os.environ["SUNO_USE_SMALL_MODELS"] = "True"
+#         preload_models()
         
-    def generateVoice(self, prompt: str):
-        print(f"Starting voice generator: {datetime.datetime.now()}")
-        audio_array = generate_audio(prompt, history_prompt='v2/en_speaker_9')
-        write_wav(self.savePath, SAMPLE_RATE, audio_array)
-        print(f"Ended voice generator: {datetime.datetime.now()}")
-        return [self.savePath]
+#     def generateVoice(self, prompt: str):
+#         print(f"Starting voice generator: {datetime.datetime.now()}")
+#         audio_array = generate_audio(prompt, history_prompt='v2/en_speaker_9')
+#         write_wav(self.savePath, SAMPLE_RATE, audio_array)
+#         print(f"Ended voice generator: {datetime.datetime.now()}")
+#         return [self.savePath]
 
 class voiceGeneratorSpeecht5:
     def __init__(self):

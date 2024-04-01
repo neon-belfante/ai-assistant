@@ -99,7 +99,6 @@ stack-data==0.6.3
 sympy==1.12
 tenacity==8.2.3
 tokenizers==0.15.2
-torch==2.2.2
 torchaudio==2.2.2
 tqdm==4.66.2
 traitlets==5.14.2
@@ -108,9 +107,9 @@ triton==2.2.0
 typing-inspect==0.9.0
 typing_extensions==4.10.0
 tzdata==2024.1
-UNKNOWN==0.0.0
 urllib3==2.2.1
 wcwidth==0.2.13
 xxhash==3.4.1
 yarl==1.9.4
 zipp==3.18.1
+torch==2.2.2
