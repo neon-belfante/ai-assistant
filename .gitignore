@@ -1,5 +1,7 @@
 ai-environment/
 temp/
 prompt_ideas.txt
+assistant_hist_test_long_term_memory.txt
+assistant_hist_test.gz
 aiAssistant.desktop
 tkinter_gui.py
