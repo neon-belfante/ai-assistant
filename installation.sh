@@ -32,10 +32,6 @@ ollama pull gemma:2b
 # Make run_app.sh executable
 chmod +x run_app.sh
 
-#A known issue requires to reinstall torch
-pip uninstall torch
-pip install torch
-
 echo "Installation complete. You can now run the application using ./ai-assistant/run_app.sh"
 
 #Deactivate venv
