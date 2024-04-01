@@ -18,16 +18,21 @@ source $venv_name/bin/activate
 sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 -y &&\
 sudo apt install libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-4.0 -y &&\
 
-#Install Ollama
-curl -fsSL https://ollama.com/install.sh | sh &&\
 
 #Install required packages from requirements.txt
-pip install -r requirements.txt
+pip install -r requirements.txt &&\
+#A known issue requires to reinstall torch
+pip uninstall torch &&\
+pip install torch
+
+
+#Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh &&\
 
 # Make run_app.sh executable
 chmod +x run_app.sh
 
-echo "Installation complete. You can now run the application using ./run_app.sh"
+echo "Installation complete. You can now run the application using ./ai-assistant/run_app.sh"
 
 #Deactivate venv
 deactivate
