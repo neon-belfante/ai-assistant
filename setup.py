@@ -1,6 +1,6 @@
 import ollama
 import PIL
-from PIL import Image, ImageTk
+from PIL import Image
 import ipyplot
 import os
 import pygame
