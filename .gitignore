@@ -1,1 +1,4 @@
 ai-environment/
+temp/
+prompt ideas.txt
+tkinter_gui.py
