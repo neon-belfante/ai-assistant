@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Ella_Assistant
+Exec="/home/neon/Dropbox/Trabalho/Python/AI Assistant/run_app.sh"
+Icon=/home/neon/Dropbox/Trabalho/Python/AI Assistant/ella/ella_icon.png
+Path=/home/neon/Dropbox/Trabalho/Python/AI Assistant/
+Terminal=true

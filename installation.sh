@@ -45,5 +45,15 @@ chmod +x run_app.sh
 
 echo "Installation complete. You can now run the application using ./ai-assistant/run_app.sh"
 
+echo "[Desktop Entry]
+Name=My Application
+Exec=~/ai-assistant/run_app.sh
+Icon=~/ella/ella_icon.png
+Path=~/ai-assistant/
+Type=Application
+Terminal=true" > aiAssistant.desktop
+
+sudo cp aiAssistant.desktop ~/.local/share/applications/
+
 #Deactivate venv
 deactivate

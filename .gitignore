@@ -1,4 +1,5 @@
 ai-environment/
 temp/
 prompt_ideas.txt
+aiAssistant.desktop
 tkinter_gui.py
