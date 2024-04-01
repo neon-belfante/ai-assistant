@@ -24,7 +24,18 @@ pip install -r requirements.txt &&\
 
 
 #Install Ollama
-curl -fsSL https://ollama.com/install.sh | sh &&\
+if ! command -v ollama &> /dev/null; then
+    echo "OLLAMA is not installed."
+    read -p "Would you like to install it now? (y/n) " install_choice
+    if [[ $install_choice == "y" ]]; then
+      curl -fsSL https://ollama.com/install.sh | sh
+      echo "OLLAMA should now be installed."
+    else
+      echo "OLLAMA is required to run this script. Please install it and try again."
+      exit 1
+    fi
+  fi
+OLLAMA_HOST=0.0.0.0 ollama serve &&\
 ollama pull llama2 &&\
 ollama pull llava &&\
 ollama pull gemma:2b

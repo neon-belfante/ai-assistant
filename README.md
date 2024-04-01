@@ -4,9 +4,10 @@ Ella is a local Ai assistant that comes with her own gui.
 
 ## features
 1. She has a personality of her own `Llama2 model with cutom modelFile`
-2. She talks using a text-to-speech ai `SpeechT5Processor`
-3. She has both short-term and long-term memory with options to save and load the conversation `Use of Retrieval Augmented Generation`
+2. She shows different emotions `selected through gemma`
+3. She talks using a text-to-speech ai `SpeechT5Processor`
 4. She can react to images `LLava model`
+5. She has both short-term and long-term memory with options to save and load the conversation `Use of Retrieval Augmented Generation`
 
 
 ## Installation
@@ -19,7 +20,7 @@ sudo curl -sSL https://raw.githubusercontent.com/neon-belfante/ai-assistant/mast
 ## Running
 Run on a new terminal:
 ```
-cd ai-assistant && ./run_app.sh
+.ai-assistant/run_app.sh
 ```
 
 ### Warning
