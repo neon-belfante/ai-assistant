@@ -5,6 +5,7 @@ sudo apt install git -y &&\
 git clone https://github.com/neon-belfante/ai-assistant.git &&\
 cd ai-assistant && \
 
+sudo apt install python3.10-venv -y &&\
 #Check if virtual environment exists
 venv_name="ai-environment"
 if [ ! -d "$venv_name" ]; then
