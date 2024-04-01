@@ -1,0 +1,5 @@
+https://perchance.org/ai-text-to-image-generator
+Art style: anime
+shape: portrait
+
+chestnut red long hair, young woman, annoyed, full body picture, black skirt, red tie, black formal blazer, no background, curvy (seed:::1055299990)
