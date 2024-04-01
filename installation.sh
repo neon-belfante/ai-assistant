@@ -35,7 +35,7 @@ if ! command -v ollama &> /dev/null; then
       exit 1
     fi
   fi
-OLLAMA_HOST=1.1.1.1 ollama serve &&\
+ollama serve &&\
 ollama pull llama2 &&\
 ollama pull llava &&\
 ollama pull gemma:2b
