@@ -5,11 +5,12 @@ from langchain_community.document_loaders import TextLoader, PyPDFLoader, Online
 from langchain_text_splitters import CharacterTextSplitter, RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OllamaEmbeddings
+from pathlib import Path
 
 class textGenerator:
     def __init__(self):
         self  = self
-    
+
     def callOllama(self, prompt: str, message_hist: list, model :str, temperature: int = 0, db = None):
         start_time = datetime.datetime.now()
         print(f"Starting text generator: {start_time}")
@@ -52,8 +53,9 @@ class textGenerator:
     
     def callImageReader(self, prompt:str, filePath: str):
         print(f"Starting FileReader: {datetime.datetime.now()}")
-        message = f"What is in this image? {filePath}"
-        response = ollama.chat(model='llava', messages=[{'role':'user', 'content':message}], options={'seed':42, "temperature":0})
+        message = f'''What is in this image?'''
+        print(message)
+        response = ollama.chat(model='llava', messages=[{'role':'user', 'content':message, 'images':[filePath]}], options={'seed':42, "temperature":0})
         print(response)
         print(f"Ended FileReader: {datetime.datetime.now()}")
         return f'''{prompt} "{response['message']['content']}"'''

@@ -71,7 +71,7 @@ class Application(Gtk.Window):
 
         self.counterStoryParts = 0
         self.counterEnter = 0
-        self.interview_history = [{'role':'user', 'content':f'*For context* today is "{datetime.datetime.now().strftime("%Y %B %d, %A, %H:%M %p")}"'}]
+        self.interview_history = [{'role':'user', 'content':f'*For context* today is "{datetime.datetime.now().strftime("%Y %B %d, %A, %H:%M %p")}"'}]        
         self.longTermMemory = None
         self.filePathToRead = None
 
@@ -107,7 +107,7 @@ class Application(Gtk.Window):
             self.longTermMemory = self.textGenerator.loadLongTermMemory(f"{self.loadMessageHistPath.split('.')[0]}_long_term_memory.txt")
         elif self.loadMessageHistResponse == Gtk.ResponseType.CANCEL:
             print("Messages Hist load cancelled")
-        self.loadMessageHistDialog.destroy()  
+        self.loadMessageHistDialog.destroy()   
 
     def addSaveMessageHistOption(self):
         self.saveMessageHistButton = Gtk.EventBox()
