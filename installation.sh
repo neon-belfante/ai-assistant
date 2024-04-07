@@ -20,7 +20,7 @@ sudo apt install libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev
 
 
 #Install required packages from requirements.txt
-pip install -r requirements.txt &&\
+pip install -r requirements.txt
 
 
 #Install Ollama
