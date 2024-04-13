@@ -43,7 +43,7 @@ ollama pull gemma:2b
 # Make run_app.sh executable
 chmod +x run_app.sh
 
-echo "Installation complete. You can now run the application using ./ai-assistant/run_app.sh"
+echo "Installation complete. You can now run the application using cd ai-assistant && run_app.sh"
 
 echo "[Desktop Entry]
 Name=My Application

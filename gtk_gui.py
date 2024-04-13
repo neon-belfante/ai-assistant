@@ -71,7 +71,10 @@ class Application(Gtk.Window):
 
         self.counterStoryParts = 0
         self.counterEnter = 0
-        self.interview_history = [{'role':'user', 'content':f'*For context* today is "{datetime.datetime.now().strftime("%Y %B %d, %A, %H:%M %p")}"'}]        
+        self.interview_history = [{'role':'user', 'content':f'*For context* today is "{datetime.datetime.now().strftime("%Y %B %d, %A, %H:%M %p")}"'}]
+        self.interview_history_max_length = 4
+        self.isFirstTimeWritingToLongTermMemory = 0
+        self.longTermMemoryPath = None
         self.longTermMemory = None
         self.filePathToRead = None
 
@@ -104,7 +107,13 @@ class Application(Gtk.Window):
         if self.loadMessageHistResponse == Gtk.ResponseType.OK:
             self.loadMessageHistPath = self.loadMessageHistDialog.get_filename()
             self.interview_history = self.interview_history + joblib.load(f"{self.loadMessageHistPath}")
-            self.longTermMemory = self.textGenerator.loadLongTermMemory(f"{self.loadMessageHistPath.split('.')[0]}_long_term_memory.txt")
+            longTermMemoryPathNew = f"{self.loadMessageHistPath.split('.')[0]}_long_term_memory.txt"
+            try:
+                self.longTermMemory = self.textGenerator.loadLongTermMemory(longTermMemoryPathNew)
+            except:
+                print("No Longer Term Memory provided")
+            if self.longTermMemory is not None:
+                self.longTermMemoryPath = longTermMemoryPathNew
         elif self.loadMessageHistResponse == Gtk.ResponseType.CANCEL:
             print("Messages Hist load cancelled")
         self.loadMessageHistDialog.destroy()   
@@ -134,13 +143,14 @@ class Application(Gtk.Window):
         self.saveMessageHistResponse = self.saveMessageHistDialog.run()
         if self.saveMessageHistResponse == Gtk.ResponseType.OK:
             self.saveMessageHistPath = self.saveMessageHistDialog.get_filename()
-            joblib.dump(self.interview_history[50:], f"{self.saveMessageHistPath}")
-            longTermMemoryPath = f"{self.saveMessageHistPath.split('.')[0]}_long_term_memory.txt"
-            longTermMemorySummary = self.textGenerator.callMessageHistSummariser(self.interview_history)
-            ltm = open(longTermMemoryPath, "a")
-            ltm.write(str(longTermMemorySummary))
-            ltm.close()
-            self.longTermMemory = self.textGenerator.loadLongTermMemory(longTermMemoryPath)
+            joblib.dump(self.interview_history, f"{self.saveMessageHistPath}")
+            if self.longTermMemoryPath is not None:
+                longTermMemoryPathNew = f"{self.saveMessageHistPath.split('.')[0]}_long_term_memory.txt"
+                if longTermMemoryPathNew != self.longTermMemoryPath:
+                    with open(self.longTermMemoryPath,'r') as originalMemoryFile, open(longTermMemoryPathNew,'a') as targetMemoryFile:
+                        for line in originalMemoryFile:
+                            targetMemoryFile.write(line)
+                    self.longTermMemoryPath = longTermMemoryPathNew
         elif self.saveMessageHistResponse == Gtk.ResponseType.CANCEL:
             print("Messages Hist save cancelled")
         self.saveMessageHistDialog.destroy()
@@ -327,6 +337,10 @@ class Application(Gtk.Window):
         else:
             prompt = self.enterText.get_text()
         result = self.textGenerator.callOllama(prompt=prompt, message_hist=self.interview_history, model=self.assistant.modelName, db=self.longTermMemory)
+        if len(self.interview_history) > self.interview_history_max_length:
+            self.writeToLongTermMemory()
+            self.interview_history = self.interview_history[-self.interview_history_max_length:]
+            self.longTermMemory = self.textGenerator.loadLongTermMemory(self.longTermMemoryPath)
         self.story_list = createStoryList(result)
         self.img_list = self.createImageListFromEmotions(self.story_list, self.assistant)
         self.counterStoryParts = 0
@@ -340,6 +354,29 @@ class Application(Gtk.Window):
         self.updateImage(None)
         self.voiceOutputList = self.voice.generateVoice(prompt=self.story_list[0])
         self.playAudio(self.voiceOutputList)
+    
+    def writeToLongTermMemory(self):
+        if self.isFirstTimeWritingToLongTermMemory == 0:
+            self.messagesToWrite = self.interview_history
+            self.isFirstTimeWritingToLongTermMemory = 1
+        else:
+            self.messagesToWrite = self.interview_history[-2:]
+        if self.longTermMemoryPath is None:
+            self.longTermMemoryPath = "long_term_memory_temp.txt"
+            ltm = open(self.longTermMemoryPath, "a")
+            ltm.truncate(0)
+        else:
+            ltm = open(self.longTermMemoryPath, "a")
+        for message_i in self.messagesToWrite:
+            if message_i['role'] == 'assistant':
+                role = self.assistant.modelName
+            else:
+                role = message_i['role']
+            message = message_i['content'].replace('\n\n', ' ').replace('\n', ' ')
+            string_to_write = f'''\n{role} said: {message}'''
+            ltm.write(str(string_to_write))
+        ltm.close()        
+            
     
     def createImageListFromEmotions(self, story_list: list[str], assistantClass):
         img_list = []

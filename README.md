@@ -20,7 +20,7 @@ sudo curl -sSL https://raw.githubusercontent.com/neon-belfante/ai-assistant/mast
 ## Running
 Run on a new terminal:
 ```
-.ai-assistant/run_app.sh
+cd ai-assistant && run_app.sh
 ```
 
 ### Warning
