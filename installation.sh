@@ -38,7 +38,8 @@ if ! command -v ollama &> /dev/null; then
 ollama serve
 ollama pull llama2 &&\
 ollama pull llava &&\
-ollama pull gemma:2b
+ollama pull gemma:2b &&\
+ollama pull nomic-embed-text
 
 # Make run_app.sh executable
 chmod +x run_app.sh
