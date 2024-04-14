@@ -1,6 +1,6 @@
 import gi
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GdkPixbuf
+from gi.repository import Gtk, GdkPixbuf, GLib
 import os
 from setup import *
 # from imageGenerator import imageGenerator
@@ -10,6 +10,7 @@ from voiceGenerator import voiceGeneratorSpeecht5
 import datetime
 import cairo
 import joblib
+import threading
 
 def createStoryList(complete_story: str):
     return complete_story.split("\n\n")
@@ -66,7 +67,6 @@ class Application(Gtk.Window):
         self.imagePath = self.assistant.imagesPaths[self.assistant.standByEmotion]
         self.imgSize = 100
 
-        
         self.openOriginalImage()
 
         self.counterStoryParts = 0
@@ -89,34 +89,64 @@ class Application(Gtk.Window):
         self.loadMessageHistButton.set_tooltip_text("Load message history from file")
 
     def onLoadMessageHistClicked(self, button, image):
-        self.loadMessageHistDialog = Gtk.FileChooserDialog(
-            title = "Load message hist dialog", 
-            parent = self, 
-            action = Gtk.FileChooserAction.OPEN
-        )
-        self.loadMessageHistDialog.add_button(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
-        self.loadMessageHistDialog.add_button(Gtk.STOCK_OPEN, Gtk.ResponseType.OK)
-        self.loadMessageHistDialog.set_default_response(Gtk.ResponseType.OK)
+        def manageFileChooserDialog():
+            self.loadMessageHistDialog = Gtk.FileChooserDialog(
+                title = "Load message hist dialog", 
+                parent = self, 
+                action = Gtk.FileChooserAction.OPEN
+            )
+            self.loadMessageHistDialog.add_button(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
+            self.loadMessageHistDialog.add_button(Gtk.STOCK_OPEN, Gtk.ResponseType.OK)
+            self.loadMessageHistDialog.set_default_response(Gtk.ResponseType.OK)
 
-        self.filter_gz = Gtk.FileFilter()
-        self.filter_gz.set_name("Gzip files (*.gz)")
-        self.filter_gz.add_pattern("*.gz")
-        self.loadMessageHistDialog.add_filter(self.filter_gz)
+            self.filter_gz = Gtk.FileFilter()
+            self.filter_gz.set_name("Gzip files (*.gz)")
+            self.filter_gz.add_pattern("*.gz")
+            self.loadMessageHistDialog.add_filter(self.filter_gz)
 
-        self.loadMessageHistResponse = self.loadMessageHistDialog.run()
-        if self.loadMessageHistResponse == Gtk.ResponseType.OK:
-            self.loadMessageHistPath = self.loadMessageHistDialog.get_filename()
-            self.interview_history = self.interview_history + joblib.load(f"{self.loadMessageHistPath}")
+            self.loadMessageHistResponse = self.loadMessageHistDialog.run()
+            if self.loadMessageHistResponse == Gtk.ResponseType.OK:
+                self.loadMessageHistPath = self.loadMessageHistDialog.get_filename()
+            elif self.loadMessageHistResponse == Gtk.ResponseType.CANCEL:
+                print("Messages Hist load cancelled")
+            self.loadMessageHistDialog.destroy()
+        
+        def loadMemoryAction():
+            interview_history = joblib.load(f"{self.loadMessageHistPath}") + self.interview_history
             longTermMemoryPathNew = f"{self.loadMessageHistPath.split('.')[0]}_long_term_memory.txt"
             try:
-                self.longTermMemory = self.textGenerator.loadLongTermMemory(longTermMemoryPathNew)
+                longTermMemory = self.textGenerator.loadLongTermMemory(longTermMemoryPathNew)
             except:
+                longTermMemory = None
                 print("No Longer Term Memory provided")
-            if self.longTermMemory is not None:
-                self.longTermMemoryPath = longTermMemoryPathNew
-        elif self.loadMessageHistResponse == Gtk.ResponseType.CANCEL:
-            print("Messages Hist load cancelled")
-        self.loadMessageHistDialog.destroy()   
+            if longTermMemory is not None:
+                longTermMemoryPath = longTermMemoryPathNew
+            else:
+                longTermMemoryPath = self.longTermMemoryPath
+            result_dict = {'interview_history': interview_history,
+                           'longTermMemory': longTermMemory,
+                           'longTermMemoryPath': longTermMemoryPath}
+            GLib.idle_add(lambda: updateMemoryVariables(result_dict))
+        
+        def updateMemoryVariables(result_dict):
+            self.interview_history = result_dict['interview_history']
+            self.longTermMemory = result_dict['longTermMemory']
+            self.longTermMemoryPath = result_dict['longTermMemoryPath']
+            self.loadMessageHistButton.set_sensitive(True)
+            self.saveMessageHistButton.set_sensitive(True)
+            self.restoreButtonIcon(self.enterButton)
+            if self.counterEnter != 0:
+                self.nextButton.set_sensitive(True)
+                self.backButton.set_sensitive(True)
+        
+        manageFileChooserDialog()
+        if self.counterEnter != 0:
+            self.nextButton.set_sensitive(False)
+            self.backButton.set_sensitive(False)
+        self.loadMessageHistButton.set_sensitive(False)
+        self.saveMessageHistButton.set_sensitive(False)
+        self.addSpinnerToButton(self.enterButton)
+        threading.Thread(target=loadMemoryAction).start()
 
     def addSaveMessageHistOption(self):
         self.saveMessageHistButton = Gtk.EventBox()
@@ -154,6 +184,10 @@ class Application(Gtk.Window):
         elif self.saveMessageHistResponse == Gtk.ResponseType.CANCEL:
             print("Messages Hist save cancelled")
         self.saveMessageHistDialog.destroy()
+    
+    def setSpinner(self):
+        self.spinner = Gtk.Spinner()
+        self.topMenuContainer.pack_start(self.spinner, False, False, 0)
 
     def setMenuButton(self):
         self.menu = Gtk.Popover()
@@ -311,53 +345,174 @@ class Application(Gtk.Window):
             self.counterStoryParts = len(self.story_list) - 1
         else:
             self.counterStoryParts -= 1
-        self.imagePath = self.img_list[self.counterStoryParts]
-        self.updateImage(None)
-        self.result.get_buffer().set_text(self.story_list[self.counterStoryParts])
-        self.voiceOutputList = self.voice.generateVoice(self.story_list[self.counterStoryParts])
-        self.pagesIndicatorNewText.set_text("{}/{}".format(self.counterStoryParts + 1, len(self.story_list)))
-        self.playAudio(self.voiceOutputList)
+
+        def callVoiceGenerator():
+            voiceOutputList = self.voice.generateVoice(self.story_list[self.counterStoryParts])
+            GLib.idle_add(lambda: updateGui(voiceOutputList))
+
+        def updateGui(voiceOutputList):
+            self.voiceOutputList = voiceOutputList
+            self.imagePath = self.img_list[self.counterStoryParts]
+            self.updateImage(None)
+            self.result.get_buffer().set_text(self.story_list[self.counterStoryParts])
+            self.pagesIndicatorNewText.set_text("{}/{}".format(self.counterStoryParts + 1, len(self.story_list)))
+            self.playAudio(self.voiceOutputList)
+            self.restoreButtonIcon(self.backButton)
+            self.enterButton.set_sensitive(True)
+            self.loadMessageHistButton.set_sensitive(True)
+            self.saveMessageHistButton.set_sensitive(True)
+            self.nextButton.set_sensitive(True)
+
+        self.addSpinnerToButton(self.backButton)
+        self.enterButton.set_sensitive(False)
+        self.nextButton.set_sensitive(False)
+        self.loadMessageHistButton.set_sensitive(False)
+        self.saveMessageHistButton.set_sensitive(False)
+        threading.Thread(target=callVoiceGenerator).start()
 
     def actionNext(self, widget):
         if self.counterStoryParts == len(self.story_list) - 1:
             self.counterStoryParts = 0
         else:
             self.counterStoryParts += 1
-        self.imagePath = self.img_list[self.counterStoryParts]
-        self.updateImage(None)
-        self.result.get_buffer().set_text(self.story_list[self.counterStoryParts])
-        self.voiceOutputList = self.voice.generateVoice(self.story_list[self.counterStoryParts])
-        self.pagesIndicatorNewText.set_text("{}/{}".format(self.counterStoryParts + 1, len(self.story_list)))
-        self.playAudio(self.voiceOutputList)
+
+        def callVoiceGenerator():
+            voiceOutputList = self.voice.generateVoice(self.story_list[self.counterStoryParts])
+            GLib.idle_add(lambda: updateGui(voiceOutputList))
+
+        def updateGui(voiceOutputList):
+            self.voiceOutputList = voiceOutputList
+            self.imagePath = self.img_list[self.counterStoryParts]
+            self.updateImage(None)
+            self.result.get_buffer().set_text(self.story_list[self.counterStoryParts])
+            self.pagesIndicatorNewText.set_text("{}/{}".format(self.counterStoryParts + 1, len(self.story_list)))
+            self.playAudio(self.voiceOutputList)
+            self.restoreButtonIcon(self.nextButton)
+            self.enterButton.set_sensitive(True)
+            self.loadMessageHistButton.set_sensitive(True)
+            self.saveMessageHistButton.set_sensitive(True)
+            self.backButton.set_sensitive(True)
+        
+        self.addSpinnerToButton(self.nextButton)
+        self.enterButton.set_sensitive(False)
+        self.backButton.set_sensitive(False)
+        self.loadMessageHistButton.set_sensitive(False)
+        self.saveMessageHistButton.set_sensitive(False)
+        threading.Thread(target=callVoiceGenerator).start()
+
+    def addSpinnerToButton(self, button):
+        self.spinner = Gtk.Spinner()
+        if isinstance(button, Gtk.Button):
+            self.tempOriginalButtonIcon = button.get_image()
+            button.set_image(self.spinner)
+            button.set_always_show_image(True)
+        button.set_sensitive(False)
+        self.spinner.start()
+        self.show_all()
+    
+    def restoreButtonIcon(self, button):
+        self.spinner.stop()
+        if isinstance(button, Gtk.Button):
+            button.set_image(self.tempOriginalButtonIcon)
+        button.set_sensitive(True)
+        self.show_all()
 
     def actionCallOllama(self, widget):
-        if self.filePathToRead is not None:
-            prompt = self.textGenerator.callImageReader(self.enterText.get_text(), self.filePathToRead)
-            self.filePathToRead = None
-        else:
-            prompt = self.enterText.get_text()
-        result = self.textGenerator.callOllama(prompt=prompt, message_hist=self.interview_history, model=self.assistant.modelName, db=self.longTermMemory)
-        if len(self.interview_history) > self.interview_history_max_length:
-            self.writeToLongTermMemory()
-            self.interview_history = self.interview_history[-self.interview_history_max_length:]
-            self.longTermMemory = self.textGenerator.loadLongTermMemory(self.longTermMemoryPath)
-        self.story_list = createStoryList(result)
-        self.img_list = self.createImageListFromEmotions(self.story_list, self.assistant)
-        self.counterStoryParts = 0
-        if self.counterEnter == 0:
-            self.createTextResultsBox()
-            self.createBackAndNextButtons()
-        self.pagesIndicatorNewText.set_text("{}/{}".format(self.counterStoryParts + 1, len(self.story_list)))
-        self.counterEnter = 1
-        self.result.get_buffer().set_text(self.story_list[0])
-        self.imagePath = self.img_list[0]
-        self.updateImage(None)
-        self.voiceOutputList = self.voice.generateVoice(prompt=self.story_list[0])
-        self.playAudio(self.voiceOutputList)
-    
+        def callTextGenerator(textGenerator, text, filePathToRead, model, interview_history, longTermMemory):
+            if filePathToRead is not None:
+                prompt = textGenerator.callImageReader(text, filePathToRead)
+                filePathToRead = None
+            else:
+                prompt = text
+            result = textGenerator.callOllama(prompt=prompt, message_hist=interview_history, model=model, db=longTermMemory)
+            return result, interview_history
+
+        def callLongTermMemoryWriter(textGenerator,
+                                     interview_history,
+                                     interview_history_max_length,
+                                     writeToLongTermMemory,
+                                     longTermMemory):
+            if len(interview_history) > interview_history_max_length:
+                writeToLongTermMemory()
+                interview_history = interview_history[-interview_history_max_length:]
+                longTermMemory = textGenerator.loadLongTermMemory(self.longTermMemoryPath)
+            return interview_history, longTermMemory
+        
+        def callEmotionGenerator(createImageListFromEmotions, result_text, assistant):
+            story_list = createStoryList(result_text)
+            img_list = createImageListFromEmotions(story_list, assistant)
+            return story_list, img_list
+        
+        def callVoiceGenerator(voice, story_list):
+            voiceOutputList = voice.generateVoice(prompt=story_list[0])
+            return voiceOutputList
+        
+        def callGenerators():
+            result_text, interview_history = callTextGenerator(textGenerator=self.textGenerator,
+                                                          text=self.enterText.get_text(), 
+                                                          filePathToRead=self.filePathToRead, 
+                                                          model=self.assistant.modelName, 
+                                                          interview_history=self.interview_history,
+                                                          longTermMemory=self.longTermMemory)
+            interview_history, longTermMemory = callLongTermMemoryWriter(textGenerator=self.textGenerator,
+                                                                        interview_history=interview_history,
+                                                                        interview_history_max_length=self.interview_history_max_length,
+                                                                        writeToLongTermMemory=self.writeToLongTermMemory,
+                                                                        longTermMemory=self.longTermMemory)
+            story_list, img_list = callEmotionGenerator(createImageListFromEmotions=self.createImageListFromEmotions,
+                                                        result_text=result_text,
+                                                        assistant=self.assistant)
+            voiceOutputList = callVoiceGenerator(voice=self.voice, story_list=story_list)
+            result_dict = {
+                'result_text' : result_text,
+                'interview_history' : interview_history,
+                'longTermMemory' : longTermMemory,
+                'story_list' : story_list,
+                'img_list' : img_list,
+                'voiceOutputList' : voiceOutputList
+            }
+            GLib.idle_add(lambda: updateVariables(result_dict))
+            GLib.idle_add(lambda: updateGui())
+
+        def updateVariables(result_dict):
+            self.result_text = result_dict['result_text']
+            self.interview_history = result_dict['interview_history']
+            self.longTermMemory = result_dict['longTermMemory']
+            self.story_list = result_dict['story_list']
+            self.img_list = result_dict['img_list']
+            self.voiceOutputList = result_dict['voiceOutputList']
+        
+        def updateGui():
+            self.counterStoryParts = 0
+            if self.counterEnter == 0:
+                self.createTextResultsBox()
+                self.createBackAndNextButtons()
+            self.pagesIndicatorNewText.set_text("{}/{}".format(self.counterStoryParts + 1, len(self.story_list)))
+            self.counterEnter = 1
+            self.result.get_buffer().set_text(self.story_list[0])
+            self.imagePath = self.img_list[0]
+            self.updateImage(None)
+            self.playAudio(self.voiceOutputList)
+            self.restoreButtonIcon(self.enterButton)
+            self.nextButton.set_sensitive(True)
+            self.backButton.set_sensitive(True)
+            self.loadMessageHistButton.set_sensitive(True)
+            self.saveMessageHistButton.set_sensitive(True)
+        
+        self.addSpinnerToButton(self.enterButton)
+        if self.counterEnter != 0:
+            self.nextButton.set_sensitive(False)
+            self.backButton.set_sensitive(False)
+        self.loadMessageHistButton.set_sensitive(False)
+        self.saveMessageHistButton.set_sensitive(False)
+        threading.Thread(target=callGenerators).start()
+                        
     def writeToLongTermMemory(self):
         if self.isFirstTimeWritingToLongTermMemory == 0:
-            self.messagesToWrite = self.interview_history
+            if self.longTermMemoryPath is None:
+                self.messagesToWrite = self.interview_history
+            else:
+                self.messagesToWrite = self.interview_history[-3:]
             self.isFirstTimeWritingToLongTermMemory = 1
         else:
             self.messagesToWrite = self.interview_history[-2:]
@@ -368,12 +523,13 @@ class Application(Gtk.Window):
         else:
             ltm = open(self.longTermMemoryPath, "a")
         for message_i in self.messagesToWrite:
+            message = message_i['content'].replace('\n\n', ' ').replace('\n', ' ')
             if message_i['role'] == 'assistant':
                 role = self.assistant.modelName
+                string_to_write = f'''\n{role} said: {message}'''
             else:
                 role = message_i['role']
-            message = message_i['content'].replace('\n\n', ' ').replace('\n', ' ')
-            string_to_write = f'''\n{role} said: {message}'''
+                string_to_write = f'''\n\n{role} said: {message}'''
             ltm.write(str(string_to_write))
         ltm.close()        
             

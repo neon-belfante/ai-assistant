@@ -74,9 +74,9 @@ class textGenerator:
     def loadLongTermMemory(self, filePath: str):
         print(f"Start loading long term memory: {datetime.datetime.now()}")
         raw_documents =  TextLoader(filePath).load()
-        text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=0)
+        text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
         documents = text_splitter.split_documents(raw_documents)
-        db = Chroma.from_documents(documents, OllamaEmbeddings(model="gemma:2b"))
+        db = Chroma.from_documents(documents, OllamaEmbeddings(model="nomic-embed-text"))
         print(f"Ended loading long term memory: {datetime.datetime.now()}")
         return db
     
