@@ -5,7 +5,7 @@ import os
 from setup import *
 # from imageGenerator import imageGenerator
 from textGenerator import textGenerator
-from ellaAssistant import ella
+from ellaAssistant import *
 from voiceGenerator import voiceGeneratorSpeecht5
 import datetime
 import cairo
@@ -23,7 +23,8 @@ class Application(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self, title="Assistant")
 
-        self.assistant = ella()
+        self.assistantFactory = assistantsFactory()
+        self.defaultAssistant = "ella"
         self.voice = voiceGeneratorSpeecht5()
         self.textGenerator = textGenerator()
 
@@ -60,26 +61,33 @@ class Application(Gtk.Window):
         self.addCropSlider()
         self.addSaveMessageHistOption()
         self.addLoadMessageHistOption()
+        self.addVoiceToggleOption()
+        self.addAssistantComboBox()
         self.setMenuButton()
         
         self.createUploadButton()
 
-        self.imagePath = self.assistant.imagesPaths[self.assistant.standByEmotion]
         self.imgSize = 100
 
         self.openOriginalImage()
+        self.updateAssistant(self.defaultAssistant)
 
         self.counterStoryParts = 0
         self.counterEnter = 0
-        self.interview_history = [{'role':'user', 'content':f'*For context* today is "{datetime.datetime.now().strftime("%Y %B %d, %A, %H:%M %p")}"'}]
         self.interview_history_max_length = 4
+        self.makeWindowTransparent()
+        self.setStyling()
+    
+    def updateAssistant(self, assistant_name):
+        self.assistant = self.assistantFactory.register[assistant_name]()
+        self.imagePath = self.assistant.imagesPaths[self.assistant.standByEmotion]
+        self.interview_history = [{'role':'user', 'content':f'*For context* today is "{datetime.datetime.now().strftime("%Y %B %d, %A, %H:%M %p")}"'}]
         self.isFirstTimeWritingToLongTermMemory = 0
         self.longTermMemoryPath = None
         self.longTermMemory = None
         self.filePathToRead = None
-
-        self.makeWindowTransparent()
-        self.setStyling()
+        self.updateImage(None)
+        self.voice.updateSpeaker(self.assistant.speaker)
 
     def addLoadMessageHistOption(self):
         self.loadMessageHistButton = Gtk.EventBox()
@@ -87,7 +95,7 @@ class Application(Gtk.Window):
         self.loadMessageHistButton.add(self.loadMessageHistButtonIcon)
         self.loadMessageHistButton.connect("button_press_event", self.onLoadMessageHistClicked)
         self.loadMessageHistButton.set_tooltip_text("Load message history from file")
-
+    
     def onLoadMessageHistClicked(self, button, image):
         def manageFileChooserDialog():
             self.loadMessageHistDialog = Gtk.FileChooserDialog(
@@ -184,10 +192,34 @@ class Application(Gtk.Window):
         elif self.saveMessageHistResponse == Gtk.ResponseType.CANCEL:
             print("Messages Hist save cancelled")
         self.saveMessageHistDialog.destroy()
-    
+
+    def addVoiceToggleOption(self):
+        self.voiceSwitchButton = Gtk.Switch()
+        self.voiceSwitchButton.connect("notify::active", self.onVoiceButtonToggled)
+        self.voiceSwitchButton.set_active(True)
+        self.voiceOptionOn = True
+
+    def onVoiceButtonToggled(self, switch, gparam):
+        if switch.get_active():
+            self.voiceOptionOn = True
+        else:
+            self.voiceOptionOn = False
+
     def setSpinner(self):
         self.spinner = Gtk.Spinner()
         self.topMenuContainer.pack_start(self.spinner, False, False, 0)
+    
+    def addAssistantComboBox(self):
+        self.assistantComboBox = Gtk.ComboBoxText()
+        self.assistantList = list(self.assistantFactory.register.keys())
+        for assistant_i in self.assistantList:
+            self.assistantComboBox.append_text(assistant_i)
+        self.assistantComboBox.connect("changed", self.onNewAssistantChosen)
+    
+    def onNewAssistantChosen(self, assistantComboBox):
+        new_assistant = assistantComboBox.get_active_text()
+        if new_assistant is not None:
+            self.updateAssistant(new_assistant)
 
     def setMenuButton(self):
         self.menu = Gtk.Popover()
@@ -199,15 +231,21 @@ class Application(Gtk.Window):
 
         self.menuGrid = Gtk.Grid()
         self.menuGrid.set_row_spacing(1)
+        self.menuGrid.set_column_spacing(1)
         self.menuGrid.attach(Gtk.Image.new_from_icon_name("zoom-in-symbolic", Gtk.IconSize.BUTTON), 0, 0, 1,1)
-        self.menuGrid.attach(Gtk.Image.new_from_icon_name("image-crop-symbolic", Gtk.IconSize.BUTTON), 1, 0, 1,1)
-        self.menuGrid.attach(Gtk.Image.new_from_icon_name("media-floppy-symbolic", Gtk.IconSize.BUTTON), 2, 0, 1,1)
-        self.menuGrid.attach(self.saveMessageHistButton, 2, 2, 1,20)
-        self.menuGrid.attach(self.loadMessageHistButton, 2, 21, 1, 20)
-        self.menuGrid.attach(self.imageSizeScale, 0, 1, 1, 200)
-        self.menuGrid.attach(self.imageCropScale, 1, 1, 1, 200)
+        self.menuGrid.attach(Gtk.Image.new_from_icon_name("image-crop-symbolic", Gtk.IconSize.BUTTON), 0, 1, 1,1)
+        self.menuGrid.attach(Gtk.Image.new_from_icon_name("audio-volume-medium", Gtk.IconSize.BUTTON), 0, 2, 1,1)
+        self.menuGrid.attach(Gtk.Image.new_from_icon_name("media-floppy-symbolic", Gtk.IconSize.BUTTON), 0, 3, 1,1)
+        self.menuGrid.attach(Gtk.Image.new_from_icon_name("avatar-default", Gtk.IconSize.BUTTON), 0, 4, 1,1)
+        self.menuGrid.attach(self.imageSizeScale, 1, 0, 170, 1)
+        self.menuGrid.attach(self.imageCropScale, 1, 1, 170, 1)
+        self.menuGrid.attach(self.voiceSwitchButton, 10, 2, 10, 1)
+        self.menuGrid.attach(self.saveMessageHistButton, 10, 3, 1, 1)
+        self.menuGrid.attach(self.loadMessageHistButton, 12, 3, 5, 1)
+        self.menuGrid.attach(self.assistantComboBox, 10, 4, 50, 1)
+        
         self.menu.add(self.menuGrid)
-        self.menu.set_size_request(100, 200)
+        self.menu.set_size_request(200, 100)
 
     def onMenuButtonClicked(self, button, image):
         self.menu.set_relative_to(button)
@@ -240,19 +278,18 @@ class Application(Gtk.Window):
 
     def openOriginalImage(self):
         self.image = Gtk.Image()
-        self.updateImage(None)
         self.imageContainer.set_center_widget(self.image)
         self.imageContainer.set_hexpand(True)
         self.imageContainer.set_vexpand(True)
     
     def addSizeSlider(self):
-        self.imageSizeScale = Gtk.Scale.new_with_range(Gtk.Orientation.VERTICAL, -130, -25, 1)
+        self.imageSizeScale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 25, 130, 1)
         self.imageSizeScale.set_draw_value(False)
-        self.imageSizeScale.set_value(-100)
+        self.imageSizeScale.set_value(100)
         self.imageSizeScale.connect("value-changed", self.updateImage)
     
     def addCropSlider(self):
-        self.imageCropScale = Gtk.Scale.new_with_range(Gtk.Orientation.VERTICAL, -100, -25, 1)
+        self.imageCropScale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, -100, -25, 1)
         self.imageCropScale.set_draw_value(False)
         self.imageCropScale.set_value(-100)
         self.imageCropScale.connect("value-changed", self.updateImage)
@@ -266,7 +303,7 @@ class Application(Gtk.Window):
         self.image.set_from_pixbuf(self.cropped_pixbuf)
 
     def updateImageSize(self):
-        self.imgSize = self.imageSizeScale.get_value() * (-1)
+        self.imgSize = self.imageSizeScale.get_value()
         self.desired_width = self.pixbuf.get_width() * (self.imgSize/100)
         self.desired_height = self.pixbuf.get_height() * (self.imgSize/100)
         print(self.imgSize)
@@ -315,13 +352,16 @@ class Application(Gtk.Window):
         self.show_all()       
     
     def playAudio(self, mp3_list):
-        pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=4096)
-        for i, mp3 in enumerate(mp3_list):
-            if i == 0:
-                pygame.mixer.music.load(mp3)
-            else:
-                pygame.mixer.music.queue(mp3)
-            pygame.mixer.music.play(loops=0)
+        if mp3_list is None:
+            pass
+        else:
+            pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=4096)
+            for i, mp3 in enumerate(mp3_list):
+                if i == 0:
+                    pygame.mixer.music.load(mp3)
+                else:
+                    pygame.mixer.music.queue(mp3)
+                pygame.mixer.music.play(loops=0)
 
     def createBackAndNextButtons(self):
         self.backButton = Gtk.Button()
@@ -347,7 +387,10 @@ class Application(Gtk.Window):
             self.counterStoryParts -= 1
 
         def callVoiceGenerator():
-            voiceOutputList = self.voice.generateVoice(self.story_list[self.counterStoryParts])
+            if self.voiceOptionOn:
+                voiceOutputList = self.voice.generateVoice(self.story_list[self.counterStoryParts])
+            else: 
+                voiceOutputList = None
             GLib.idle_add(lambda: updateGui(voiceOutputList))
 
         def updateGui(voiceOutputList):
@@ -377,7 +420,10 @@ class Application(Gtk.Window):
             self.counterStoryParts += 1
 
         def callVoiceGenerator():
-            voiceOutputList = self.voice.generateVoice(self.story_list[self.counterStoryParts])
+            if self.voiceOptionOn:
+                voiceOutputList = self.voice.generateVoice(self.story_list[self.counterStoryParts])
+            else: 
+                voiceOutputList = None
             GLib.idle_add(lambda: updateGui(voiceOutputList))
 
         def updateGui(voiceOutputList):
@@ -462,7 +508,10 @@ class Application(Gtk.Window):
             story_list, img_list = callEmotionGenerator(createImageListFromEmotions=self.createImageListFromEmotions,
                                                         result_text=result_text,
                                                         assistant=self.assistant)
-            voiceOutputList = callVoiceGenerator(voice=self.voice, story_list=story_list)
+            if self.voiceOptionOn:
+                voiceOutputList = callVoiceGenerator(voice=self.voice, story_list=story_list)
+            else:
+                voiceOutputList = None
             result_dict = {
                 'result_text' : result_text,
                 'interview_history' : interview_history,
@@ -537,7 +586,7 @@ class Application(Gtk.Window):
     def createImageListFromEmotions(self, story_list: list[str], assistantClass):
         img_list = []
         for story_i in story_list:
-            emotion_i = self.textGenerator.defineEmotion(story_i, assistantClass.emotionsList)
+            emotion_i = self.textGenerator.defineEmotionUsingEmbeddings(story_i, assistantClass.emotionsList)
             image_path = assistantClass.imagesPaths[emotion_i]
             img_list.append(image_path)
         return img_list

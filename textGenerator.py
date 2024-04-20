@@ -1,5 +1,6 @@
 import ollama
 import datetime
+import chromadb
 import re
 from langchain_community.document_loaders import TextLoader, PyPDFLoader, OnlinePDFLoader
 from langchain_text_splitters import CharacterTextSplitter, RecursiveCharacterTextSplitter
@@ -48,6 +49,31 @@ class textGenerator:
             emotion_chosen = "thinking"
         else:
             emotion_chosen = emotion_candidates[0]
+        print(f"Ended Emotion generator: {datetime.datetime.now()}")
+        return emotion_chosen
+    
+    def defineEmotionUsingEmbeddings(self, prompt: str, emotion_list: list):
+        print(f"Starting Emotion generator: {datetime.datetime.now()}")
+        model = "gemma:2b"
+        try:
+            client = chromadb.Client()
+            collection = client.create_collection(name="emotions")
+            for i, emotion_i in enumerate(emotion_list):
+                response = ollama.embeddings(model=model, prompt=f"{emotion_i}")
+                embedding = response["embedding"]
+                collection.add(
+                    ids=[str(i)],
+                    embeddings=[embedding],
+                    documents=[emotion_i]
+                )
+        except:
+            collection = client.get_collection(name="emotions")
+        prompt_embedding = ollama.embeddings(prompt=prompt, model=model)
+        results = collection.query(query_embeddings=[prompt_embedding["embedding"]], n_results=1)
+        emotion_chosen = results["documents"][0][0]
+        print(emotion_chosen)
+        if emotion_chosen not in emotion_list:
+            emotion_chosen = "thinking"
         print(f"Ended Emotion generator: {datetime.datetime.now()}")
         return emotion_chosen
     

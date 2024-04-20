@@ -59,7 +59,11 @@ class voiceGeneratorSpeecht5:
         }
         self.speaker = 'slt'
         self.speaker_code = self.speakers[self.speaker]
-
+    
+    def updateSpeaker(self, speaker:str):
+        self.speaker = speaker
+        self.speaker_code = self.speakers[self.speaker]
+        
     def generateVoice(self, prompt: str):
         print(f"Starting voice generator: {datetime.datetime.now()}")
         # preprocess text
