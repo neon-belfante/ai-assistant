@@ -54,12 +54,12 @@ class textGenerator:
     
     def defineEmotionUsingEmbeddings(self, prompt: str, emotion_list: list):
         print(f"Starting Emotion generator: {datetime.datetime.now()}")
-        model = "gemma:2b"
+        model = "nomic-embed-text"
         try:
             client = chromadb.Client()
             collection = client.create_collection(name="emotions")
             for i, emotion_i in enumerate(emotion_list):
-                response = ollama.embeddings(model=model, prompt=f"{emotion_i}")
+                response = ollama.embeddings(model=model, prompt=f"*{emotion_i}*")
                 embedding = response["embedding"]
                 collection.add(
                     ids=[str(i)],

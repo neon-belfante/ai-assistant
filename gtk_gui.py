@@ -1,12 +1,13 @@
 import gi
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GdkPixbuf, GLib
+from gi.repository import Gtk, GdkPixbuf, GLib, Gdk
 import os
 from setup import *
 # from imageGenerator import imageGenerator
 from textGenerator import textGenerator
 from ellaAssistant import *
 from voiceGenerator import voiceGeneratorSpeecht5
+from voiceRecognition import voiceRecognition
 import datetime
 import cairo
 import joblib
@@ -27,6 +28,7 @@ class Application(Gtk.Window):
         self.defaultAssistant = "ella"
         self.voice = voiceGeneratorSpeecht5()
         self.textGenerator = textGenerator()
+        self.voiceRecognition = voiceRecognition()
 
         self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=1)
         self.add(self.main_box)
@@ -62,9 +64,11 @@ class Application(Gtk.Window):
         self.addSaveMessageHistOption()
         self.addLoadMessageHistOption()
         self.addVoiceToggleOption()
+        self.addBackgroundVoiceRecognitionToggleOption()
         self.addAssistantComboBox()
         self.setMenuButton()
         
+        self.createVoiceRecognitionButton()
         self.createUploadButton()
 
         self.imgSize = 100
@@ -197,8 +201,34 @@ class Application(Gtk.Window):
         self.voiceSwitchButton = Gtk.Switch()
         self.voiceSwitchButton.connect("notify::active", self.onVoiceButtonToggled)
         self.voiceSwitchButton.set_active(True)
+        self.voiceSwitchButton.set_tooltip_text("Turn on/off assistant speech generation")
         self.voiceOptionOn = True
 
+    def addBackgroundVoiceRecognitionToggleOption(self):
+        self.backgroundVoiceSwitchButton = Gtk.Switch()
+        self.backgroundVoiceSwitchButton.connect("notify::active", self.onBackgroundVoiceRecognitionButtonToggled)
+        self.backgroundVoiceSwitchButton.set_active(False)
+        self.backgroundVoiceSwitchButton.set_tooltip_text("Turn on/off background voice recognition \nWhen On try say 'Hey listen' and wait for the Beep")
+        self.BackgroundVoiceRecognitionOption = False
+    
+    def disableToggle(self, toggle):
+        self.toggleOriginalPosition = toggle.get_active()
+        toggle.set_active(False)
+        toggle.set_sensitive(False)
+    
+    def reenableToggle(self, toggle):
+        toggle.set_active(self.toggleOriginalPosition)
+        toggle.set_sensitive(True)
+        
+    def onBackgroundVoiceRecognitionButtonToggled(self, switch, gparam):
+        if switch.get_active():
+            self.BackgroundVoiceRecognitionOption = True
+            self.createBackgroundVoiceRecognition()
+            self.voiceRecognitionButton.set_sensitive(False)
+        else:
+            self.BackgroundVoiceRecognitionOption = False
+            self.voiceRecognitionButton.set_sensitive(True)
+    
     def onVoiceButtonToggled(self, switch, gparam):
         if switch.get_active():
             self.voiceOptionOn = True
@@ -215,6 +245,7 @@ class Application(Gtk.Window):
         for assistant_i in self.assistantList:
             self.assistantComboBox.append_text(assistant_i)
         self.assistantComboBox.connect("changed", self.onNewAssistantChosen)
+        self.assistantComboBox.set_tooltip_text("Choose assistant")
     
     def onNewAssistantChosen(self, assistantComboBox):
         new_assistant = assistantComboBox.get_active_text()
@@ -235,14 +266,16 @@ class Application(Gtk.Window):
         self.menuGrid.attach(Gtk.Image.new_from_icon_name("zoom-in-symbolic", Gtk.IconSize.BUTTON), 0, 0, 1,1)
         self.menuGrid.attach(Gtk.Image.new_from_icon_name("image-crop-symbolic", Gtk.IconSize.BUTTON), 0, 1, 1,1)
         self.menuGrid.attach(Gtk.Image.new_from_icon_name("audio-volume-medium", Gtk.IconSize.BUTTON), 0, 2, 1,1)
-        self.menuGrid.attach(Gtk.Image.new_from_icon_name("media-floppy-symbolic", Gtk.IconSize.BUTTON), 0, 3, 1,1)
-        self.menuGrid.attach(Gtk.Image.new_from_icon_name("avatar-default", Gtk.IconSize.BUTTON), 0, 4, 1,1)
+        self.menuGrid.attach(Gtk.Image.new_from_icon_name("microphone-sensitivity-high", Gtk.IconSize.BUTTON), 0, 3, 1,1)
+        self.menuGrid.attach(Gtk.Image.new_from_icon_name("media-floppy-symbolic", Gtk.IconSize.BUTTON), 0, 4, 1,1)
+        self.menuGrid.attach(Gtk.Image.new_from_icon_name("avatar-default", Gtk.IconSize.BUTTON), 0, 5, 1,1)
         self.menuGrid.attach(self.imageSizeScale, 1, 0, 170, 1)
         self.menuGrid.attach(self.imageCropScale, 1, 1, 170, 1)
         self.menuGrid.attach(self.voiceSwitchButton, 10, 2, 10, 1)
-        self.menuGrid.attach(self.saveMessageHistButton, 10, 3, 1, 1)
-        self.menuGrid.attach(self.loadMessageHistButton, 12, 3, 5, 1)
-        self.menuGrid.attach(self.assistantComboBox, 10, 4, 50, 1)
+        self.menuGrid.attach(self.backgroundVoiceSwitchButton, 10, 3, 10, 1)        
+        self.menuGrid.attach(self.saveMessageHistButton, 10, 4, 1, 1)
+        self.menuGrid.attach(self.loadMessageHistButton, 12, 4, 5, 1)
+        self.menuGrid.attach(self.assistantComboBox, 10, 5, 50, 1)
         
         self.menu.add(self.menuGrid)
         self.menu.set_size_request(200, 100)
@@ -252,13 +285,66 @@ class Application(Gtk.Window):
         self.menu.show_all()
         self.menu.popup()
 
+    def createBackgroundVoiceRecognition(self):
+        def getText():
+            while self.BackgroundVoiceRecognitionOption:
+                captureAudio = self.voiceRecognition.capture_voice_input()
+                capturedAudioText = self.voiceRecognition.convert_voice_to_text(captureAudio)
+                process_voice_command(capturedAudioText)
+            if "hey listen" in capturedAudioText.lower():
+                print("other listening")
+                GLib.idle_add(lambda: self.voiceRecognitionAction(None))
+                    
+        def process_voice_command(text):
+            if "hey listen" in text.lower():
+                print("Generating Response...")
+                self.BackgroundVoiceRecognitionOption = False
+            else:
+                print("I didn't understand that command. Please try again.")
+                    
+        threading.Thread(target=getText).start() 
+            
+
+    def createVoiceRecognitionButton(self):
+        self.voiceRecognitionButton = Gtk.Button()
+        self.voiceRecognitionButtonIcon = Gtk.Image.new_from_icon_name("microphone-sensitivity-high", Gtk.IconSize.BUTTON)
+        self.voiceRecognitionButton.set_image(self.voiceRecognitionButtonIcon)
+        self.voiceRecognitionButton.connect("clicked", self.voiceRecognitionAction)
+        self.voiceRecognitionButton.set_tooltip_text("Voice message the assistant")
+        self.enterTextContainer.attach_next_to(self.voiceRecognitionButton,  self.enterButton, 1, 1, 1)
+    
+    def voiceRecognitionAction(self, button):
+        def getText():
+            GLib.idle_add(lambda: self.play_activation_sound())
+            captureAudio = self.voiceRecognition.capture_voice_input()
+            self.capturedAudioText = self.voiceRecognition.convert_voice_to_text(captureAudio)
+            GLib.idle_add(lambda: self.play_activation_sound())
+            GLib.idle_add(lambda: updateGui())
+            GLib.idle_add(lambda: self.actionCallOllama(None))
+
+        def updateGui():
+            self.enterText.set_text(self.capturedAudioText)
+            self.restoreButtonIcon(self.voiceRecognitionButton)
+        
+        self.addSpinnerToButton(self.voiceRecognitionButton)
+        if self.counterEnter != 0:
+            self.nextButton.set_sensitive(False)
+            self.backButton.set_sensitive(False)
+        self.loadMessageHistButton.set_sensitive(False)
+        self.saveMessageHistButton.set_sensitive(False)
+        self.enterButton.set_sensitive(False)
+        threading.Thread(target=getText).start()
+    
+    def play_activation_sound(self):
+        Gdk.beep()
+
     def createUploadButton(self):
         self.uploadButton = Gtk.Button()
         self.uploadButtonIcon = Gtk.Image.new_from_icon_name("image-x-generic", Gtk.IconSize.BUTTON)
         self.uploadButton.set_image(self.uploadButtonIcon)
         self.uploadButton.connect("clicked", self.uploadAction)
         self.uploadButton.set_tooltip_text("Upload image as context for the assistant")
-        self.enterTextContainer.attach_next_to(self.uploadButton,  self.enterButton, 1, 1, 1)
+        self.enterTextContainer.attach_next_to(self.uploadButton,  self.voiceRecognitionButton, 1, 1, 1)
 
     def uploadAction(self, button):
         self.uploadDialog = Gtk.FileChooserDialog(
@@ -404,13 +490,17 @@ class Application(Gtk.Window):
             self.enterButton.set_sensitive(True)
             self.loadMessageHistButton.set_sensitive(True)
             self.saveMessageHistButton.set_sensitive(True)
+            self.voiceRecognitionButton.set_sensitive(True)
             self.nextButton.set_sensitive(True)
+            self.reenableToggle(self.backgroundVoiceSwitchButton)
 
         self.addSpinnerToButton(self.backButton)
         self.enterButton.set_sensitive(False)
         self.nextButton.set_sensitive(False)
         self.loadMessageHistButton.set_sensitive(False)
         self.saveMessageHistButton.set_sensitive(False)
+        self.disableToggle(self.backgroundVoiceSwitchButton)
+        self.voiceRecognitionButton.set_sensitive(False)
         threading.Thread(target=callVoiceGenerator).start()
 
     def actionNext(self, widget):
@@ -438,12 +528,16 @@ class Application(Gtk.Window):
             self.loadMessageHistButton.set_sensitive(True)
             self.saveMessageHistButton.set_sensitive(True)
             self.backButton.set_sensitive(True)
+            self.voiceRecognitionButton.set_sensitive(True)
+            self.reenableToggle(self.backgroundVoiceSwitchButton)
         
         self.addSpinnerToButton(self.nextButton)
         self.enterButton.set_sensitive(False)
         self.backButton.set_sensitive(False)
         self.loadMessageHistButton.set_sensitive(False)
         self.saveMessageHistButton.set_sensitive(False)
+        self.disableToggle(self.backgroundVoiceSwitchButton)
+        self.voiceRecognitionButton.set_sensitive(False)
         threading.Thread(target=callVoiceGenerator).start()
 
     def addSpinnerToButton(self, button):
@@ -547,6 +641,8 @@ class Application(Gtk.Window):
             self.backButton.set_sensitive(True)
             self.loadMessageHistButton.set_sensitive(True)
             self.saveMessageHistButton.set_sensitive(True)
+            self.voiceRecognitionButton.set_sensitive(True)
+            self.reenableToggle(self.backgroundVoiceSwitchButton)
         
         self.addSpinnerToButton(self.enterButton)
         if self.counterEnter != 0:
@@ -554,6 +650,8 @@ class Application(Gtk.Window):
             self.backButton.set_sensitive(False)
         self.loadMessageHistButton.set_sensitive(False)
         self.saveMessageHistButton.set_sensitive(False)
+        self.disableToggle(self.backgroundVoiceSwitchButton)
+        self.voiceRecognitionButton.set_sensitive(False)
         threading.Thread(target=callGenerators).start()
                         
     def writeToLongTermMemory(self):
@@ -592,10 +690,17 @@ class Application(Gtk.Window):
         return img_list
 
 def main():
+    def onWindowDestroy(window):
+        app.backgroundVoiceSwitchButton.set_active(False)
+        return Gtk.main_quit()
+    
     app = Application()
-    app.connect("destroy", Gtk.main_quit)
+    app.connect("destroy", onWindowDestroy)
     app.show_all()
     Gtk.main()
+
+
+
 
 if __name__ == "__main__":
     main()
