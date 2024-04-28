@@ -17,6 +17,14 @@ source $venv_name/bin/activate
 #Install GTK
 sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 -y &&\
 sudo apt install libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-4.0 -y &&\
+sudo apt install python3-pyaudio -y &&\
+sudo apt install portaudio19-dev -y
+
+# wget https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip &&\
+# unzip vosk-model-en-us-0.22.zip &&\
+# mv vosk-model-en-us-0.22 model &&\
+# rm vosk-model-en-us-0.22.zip
+
 
 
 #Install required packages from requirements.txt
