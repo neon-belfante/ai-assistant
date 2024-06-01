@@ -24,7 +24,7 @@ def openImageFromPath(image_path: str):
 class Application(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self, title="Assistant")
-
+        
         self.assistantFactory = assistantsFactory()
         self.voiceRecognitionFactory = voiceRecognitionFactory()
         self.defaultAssistant = list(self.assistantFactory.register.keys())[0]
@@ -67,6 +67,7 @@ class Application(Gtk.Window):
         self.addLoadMessageHistOption()
         self.addVoiceToggleOption()
         self.addBackgroundVoiceRecognitionToggleOption()
+        self.addWindowVisibilityToggleOption()
         self.addAssistantComboBox()
         self.addVoiceRecognitionComboBox()
         self.setMenuButton()
@@ -84,8 +85,11 @@ class Application(Gtk.Window):
         self.counterEnter = 0
         self.interview_history_max_length = 4
         self.makeWindowTransparent()
-        self.setStyling()
-    
+        self.setStyling()    
+        
+    def updateWindowVisibility(self):
+        self.set_keep_above(self.keepWindowAbove)
+
     def updateVoiceRecognition(self, recogniser_name):
         self.disableToggle(self.backgroundVoiceSwitchButton)
         self.voiceRecognition = self.voiceRecognitionFactory.register[recogniser_name]()
@@ -220,6 +224,18 @@ class Application(Gtk.Window):
         self.backgroundVoiceSwitchButton.set_tooltip_text("Turn on/off background voice recognition \nWhen On try say 'Hey listen' and wait for the Beep")
         self.BackgroundVoiceRecognitionOption = False
     
+    def addWindowVisibilityToggleOption(self):
+        self.windowVisibilityToggle = Gtk.Switch()
+        self.windowVisibilityToggle.connect("notify::active", self.onWindowVisibilityToggled)
+        self.windowVisibilityToggle.set_active(False)
+        self.windowVisibilityToggle.set_tooltip_text("Make window always visible")
+
+    def onWindowVisibilityToggled(self, switch, gparam):
+        if switch.get_active():
+            self.set_keep_above(True)
+        else:
+            self.set_keep_above(False)
+
     def disableToggle(self, toggle):
         self.toggleOriginalPosition = toggle.get_active()
         toggle.set_active(False)
@@ -294,17 +310,19 @@ class Application(Gtk.Window):
         self.menuGrid.attach(Gtk.Image.new_from_icon_name("image-crop-symbolic", Gtk.IconSize.BUTTON), 0, 1, 1,1)
         self.menuGrid.attach(Gtk.Image.new_from_icon_name("audio-volume-medium", Gtk.IconSize.BUTTON), 0, 2, 1,1)
         self.menuGrid.attach(Gtk.Image.new_from_icon_name("microphone-sensitivity-high", Gtk.IconSize.BUTTON), 0, 3, 1,1)
-        self.menuGrid.attach(Gtk.Image.new_from_icon_name("media-floppy-symbolic", Gtk.IconSize.BUTTON), 0, 4, 1,1)
-        self.menuGrid.attach(Gtk.Image.new_from_icon_name("avatar-default", Gtk.IconSize.BUTTON), 0, 5, 1,1)
-        self.menuGrid.attach(Gtk.Image.new_from_icon_name("audio-input-microphone", Gtk.IconSize.BUTTON), 0, 6, 1,1)
+        self.menuGrid.attach(Gtk.Image.new_from_icon_name("focus-windows-symbolic", Gtk.IconSize.BUTTON), 0, 4, 1,1)
+        self.menuGrid.attach(Gtk.Image.new_from_icon_name("media-floppy-symbolic", Gtk.IconSize.BUTTON), 0, 5, 1,1)
+        self.menuGrid.attach(Gtk.Image.new_from_icon_name("avatar-default", Gtk.IconSize.BUTTON), 0, 6, 1,1)
+        self.menuGrid.attach(Gtk.Image.new_from_icon_name("audio-input-microphone", Gtk.IconSize.BUTTON), 0, 7, 1,1)
         self.menuGrid.attach(self.imageSizeScale, 1, 0, 170, 1)
         self.menuGrid.attach(self.imageCropScale, 1, 1, 170, 1)
         self.menuGrid.attach(self.voiceSwitchButton, 10, 2, 10, 1)
-        self.menuGrid.attach(self.backgroundVoiceSwitchButton, 10, 3, 10, 1)        
-        self.menuGrid.attach(self.saveMessageHistButton, 10, 4, 1, 1)
-        self.menuGrid.attach(self.loadMessageHistButton, 12, 4, 5, 1)
-        self.menuGrid.attach(self.assistantComboBox, 10, 5, 50, 1)
-        self.menuGrid.attach(self.voiceRecognitionComboBox, 10, 6, 50, 1)
+        self.menuGrid.attach(self.backgroundVoiceSwitchButton, 10, 3, 10, 1)
+        self.menuGrid.attach(self.windowVisibilityToggle, 10, 4, 10, 1)        
+        self.menuGrid.attach(self.saveMessageHistButton, 10, 5, 1, 1)
+        self.menuGrid.attach(self.loadMessageHistButton, 12, 5, 5, 1)
+        self.menuGrid.attach(self.assistantComboBox, 10, 6, 50, 1)
+        self.menuGrid.attach(self.voiceRecognitionComboBox, 10, 7, 50, 1)
         
         self.menu.add(self.menuGrid)
         self.menu.set_size_request(200, 100)

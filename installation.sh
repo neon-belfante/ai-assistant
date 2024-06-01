@@ -20,6 +20,7 @@ sudo apt install libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev
 sudo apt install python3-pyaudio -y &&\
 sudo apt install portaudio19-dev -y
 
+# Install vosk voice recognition model
 wget https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip &&\
 unzip vosk-model-en-us-0.22.zip &&\
 mv vosk-model-en-us-0.22 model &&\
