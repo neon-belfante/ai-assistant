@@ -191,3 +191,77 @@ with open("message_hist3", "r") as f:
 
 with open("message_hist3", "w") as to:
     json.dump(to_insert[:-2], to)
+
+local_store.clear()
+#####################################Ollama Embedding############
+
+import ollama
+prompt = '''Hi
+How are you?'''
+embedding = ollama.embeddings(model='gemma:2b', prompt=prompt)
+embedding
+
+####################################Parler -TTS ##############
+# pip install git+https://github.com/huggingface/parler-tts.git
+import torch
+from parler_tts import ParlerTTSForConditionalGeneration
+from transformers import AutoTokenizer
+import soundfile as sf
+
+device = "cuda:0" if torch.cuda.is_available() else "cpu"
+
+model = ParlerTTSForConditionalGeneration.from_pretrained("parler-tts/parler_tts_mini_v0.1").to(device)
+tokenizer = AutoTokenizer.from_pretrained("parler-tts/parler_tts_mini_v0.1")
+
+prompt = "Oh, my goodness, Neon-san! *giggles* A B&B?! It's like... a bed and breakfast! *excitedly* You know, like a little inn or guesthouse where you can stay overnight. They usually have cozy rooms with comfy beds and delicious breakfast foods in the morning! 🥞🍳 It's a great way to experience local culture and hospitality when traveling, don't you think?! *nods* And they're usually super cute and charming, too! *blinks* Have you ever stayed at a B&B before, Neon-san?! 😃"
+description = "A female speaker with a slightly low-pitched voice delivers her words quite expressively, in a very confined sounding environment with clear audio quality. She speaks very fast."
+
+input_ids = tokenizer(description, return_tensors="pt").input_ids.to(device)
+prompt_input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
+
+generation = model.generate(input_ids=input_ids, prompt_input_ids=prompt_input_ids)
+audio_arr = generation.cpu().numpy().squeeze()
+sf.write("parler_tts_out.wav", audio_arr, model.config.sampling_rate)
+################################################################
+###################---Voice Recognition-----###################
+import speech_recognition as sr
+
+recognizer = sr.Recognizer()
+
+def capture_voice_input():
+    with sr.Microphone() as source:
+        print("Listening...")
+        audio = recognizer.listen(source)
+    return audio
+
+def convert_voice_to_text(audio):
+    try:
+        text = recognizer.recognize_google(audio)
+        print("You said: " + text)
+    except sr.UnknownValueError:
+        text = ""
+        print("Sorry, I didn't understand that.")
+    except sr.RequestError as e:
+        text = ""
+        print("Error; {0}".format(e))
+    return text
+
+def process_voice_command(text):
+    if "hello" in text.lower():
+        print("Hello! How can I help you?")
+    elif "goodbye" in text.lower():
+        print("Goodbye! Have a great day!")
+        return True
+    else:
+        print("I didn't understand that command. Please try again.")
+    return False
+
+def main():
+    end_program = False
+    while not end_program:
+        audio = capture_voice_input()
+        text = convert_voice_to_text(audio)
+        end_program = process_voice_command(text)
+
+if __name__ == "__main__":
+    main()

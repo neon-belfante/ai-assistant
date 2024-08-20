@@ -74,6 +74,7 @@ class Application(Gtk.Window):
         
         self.createVoiceRecognitionButton()
         self.createUploadButton()
+        self.createUploadDocButton()
 
         self.imgSize = 100
 
@@ -102,6 +103,8 @@ class Application(Gtk.Window):
         self.isFirstTimeWritingToLongTermMemory = 0
         self.longTermMemoryPath = None
         self.longTermMemory = None
+        self.docMemory = None
+        self.fileDocPathToRead = None
         self.filePathToRead = None
         self.updateImage(None)
         self.voice.updateSpeaker(self.assistant.speaker)
@@ -414,6 +417,31 @@ class Application(Gtk.Window):
         self.uploadButton.set_tooltip_text("Upload image as context for the assistant")
         self.enterTextContainer.attach_next_to(self.uploadButton,  self.voiceRecognitionButton, 1, 1, 1)
 
+    def createUploadDocButton(self):
+        self.uploadDocButton = Gtk.Button()
+        self.uploadDocButtonIcon = Gtk.Image.new_from_icon_name("document-new", Gtk.IconSize.BUTTON)
+        self.uploadDocButton.set_image(self.uploadDocButtonIcon)
+        self.uploadDocButton.connect("clicked", self.uploadDocAction)
+        self.uploadDocButton.set_tooltip_text("Upload Doc as context for the assistant")
+        self.enterTextContainer.attach_next_to(self.uploadDocButton,  self.uploadButton, 1, 1, 1)
+    
+    def uploadDocAction(self, button):
+        self.uploadDialog = Gtk.FileChooserDialog(
+            title = "Please choose a file", 
+            parent = self, 
+            action = Gtk.FileChooserAction.OPEN
+        )
+        self.uploadDialog.add_button(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
+        self.uploadDialog.add_button(Gtk.STOCK_OPEN, Gtk.ResponseType.OK)
+
+        self.uploadResponse = self.uploadDialog.run()
+        if self.uploadResponse == Gtk.ResponseType.OK:
+            self.fileDocPathToRead = self.uploadDialog.get_filename()
+            self.docMemory = self.textGenerator.loadDoc(self.fileDocPathToRead)
+        elif self.uploadResponse == Gtk.ResponseType.CANCEL:
+            print("File selection cancelled")
+        self.uploadDialog.destroy()
+
     def uploadAction(self, button):
         self.uploadDialog = Gtk.FileChooserDialog(
             title = "Please choose a file", 
@@ -638,13 +666,17 @@ class Application(Gtk.Window):
         self.show_all()
 
     def actionCallOllama(self, widget):
-        def callTextGenerator(textGenerator, text, filePathToRead, model, interview_history, longTermMemory):
+        def callTextGenerator(textGenerator, text, filePathToRead, model, interview_history, longTermMemory, docMemory):
             if filePathToRead is not None:
                 prompt = textGenerator.callImageReader(text, filePathToRead)
                 filePathToRead = None
             else:
                 prompt = text
-            result = textGenerator.callOllama(prompt=prompt, message_hist=interview_history, model=model, db=longTermMemory)
+            result = textGenerator.callOllama(prompt=prompt, 
+                                              message_hist=interview_history, 
+                                              model=model, 
+                                              db=longTermMemory,
+                                              doc_db = docMemory)
             return result, interview_history
 
         def callLongTermMemoryWriter(textGenerator,
@@ -673,7 +705,8 @@ class Application(Gtk.Window):
                                                           filePathToRead=self.filePathToRead, 
                                                           model=self.assistant.modelName, 
                                                           interview_history=self.interview_history,
-                                                          longTermMemory=self.longTermMemory)
+                                                          longTermMemory=self.longTermMemory,
+                                                          docMemory = self.docMemory)
             interview_history, longTermMemory = callLongTermMemoryWriter(textGenerator=self.textGenerator,
                                                                         interview_history=interview_history,
                                                                         interview_history_max_length=self.interview_history_max_length,

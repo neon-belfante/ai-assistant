@@ -2,23 +2,28 @@ import ollama
 import datetime
 import chromadb
 import re
-from langchain_community.document_loaders import TextLoader, PyPDFLoader, OnlinePDFLoader
+from langchain_community.document_loaders import TextLoader, PyPDFLoader, OnlinePDFLoader, Docx2txtLoader
 from langchain_text_splitters import CharacterTextSplitter, RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OllamaEmbeddings
 from pathlib import Path
+import os
 
 class textGenerator:
     def __init__(self):
         self  = self
 
-    def callOllama(self, prompt: str, message_hist: list, model :str, temperature: int = 0, db = None):
+    def callOllama(self, prompt: str, message_hist: list, model :str, temperature: int = 0, db = None, doc_db = None):
         start_time = datetime.datetime.now()
         print(f"Starting text generator: {start_time}")
-        message_hist.append({'role': 'user', 'content':prompt})
         if db is not None:
             prompt_augmented = self.augmentWithLongTermMemory(prompt, db)
             prompt = prompt_augmented
+        if doc_db is not None:
+            prompt_augmented = self.augmentWithLongTermMemory(prompt, doc_db, is_document=True)
+            prompt = prompt_augmented
+        message_hist.append({'role': 'user', 'content':prompt})
+        print(prompt)
         response = ollama.chat(model=model, messages=message_hist, options={"seed": 42, "temperature": temperature})
         message_hist.append({'role': 'assistant', 'content': response['message']['content']})
         print(f"Ended text generator: {datetime.datetime.now()} - Elapsed time = {datetime.datetime.now() - start_time}")
@@ -97,6 +102,25 @@ class textGenerator:
         print(f"Ended Memory Summariser: {datetime.datetime.now()}")
         return f'''\n{datetime.datetime.now().strftime("%Y-%B-%d")}:\n"{response['message']['content']}"'''
     
+    def loadDoc(self, filePath: str):
+        print(f"Start loading doc: {datetime.datetime.now()}")
+        dict_doc_types = {
+            '.doc' : Docx2txtLoader(filePath),
+            '.docx' : Docx2txtLoader(filePath),
+            '.pdf' : PyPDFLoader(filePath),
+            '.txt' : TextLoader(filePath)
+        }
+        doc_type = os.path.splitext(filePath)
+        if doc_type[1] not in dict_doc_types.keys():
+            print(f'not valid doc type, must be one of {dict_doc_types.keys()}')
+        else:
+            raw_documents =  dict_doc_types[doc_type[1]].load()
+            text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+            documents = text_splitter.split_documents(raw_documents)
+            db = Chroma.from_documents(documents, OllamaEmbeddings(model="nomic-embed-text"))
+        print(f"Ended loading doc: {datetime.datetime.now()}")
+        return db
+    
     def loadLongTermMemory(self, filePath: str):
         print(f"Start loading long term memory: {datetime.datetime.now()}")
         raw_documents =  TextLoader(filePath).load()
@@ -106,17 +130,23 @@ class textGenerator:
         print(f"Ended loading long term memory: {datetime.datetime.now()}")
         return db
     
-    def augmentWithLongTermMemory(self, prompt: str, db, n_results = 2):
+    def augmentWithLongTermMemory(self, prompt: str, db, is_document: bool = False, n_results = 2):
         print(f"Start using long term memory: {datetime.datetime.now()}")
         docs = db.similarity_search(prompt)
         search_result = ""
         for i, result_i in enumerate(docs[:n_results]):
             search_result = f"{search_result}\n{i+1}. {result_i.page_content}"
             i = i +1
-        final_prompt = f'''
-        {prompt}
-        Use if relevant, you remember that: "{search_result}"
-        '''
-        print(final_prompt)
+        if is_document:
+            final_prompt = f'''
+            {prompt} 
+            --The document reads: "{search_result}"
+            '''
+        else:
+            final_prompt = f'''
+            {prompt}
+            Use if relevant, you remember that: "{search_result}"
+            '''
+        # print(final_prompt)
         print(f"Ended using long term memory: {datetime.datetime.now()}")
         return final_prompt
