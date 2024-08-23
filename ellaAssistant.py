@@ -211,7 +211,7 @@ class rpgDungeonMaster:
             self.imagesPaths[emotion_i] = f"./ella/ella_{emotion_i}.png"
         
         self.modelFile = '''
-FROM llama3
+FROM llama3.1
 SYSTEM You are rpgDungeonMaster
        You shall act as the narrator of the story.
        You do not take part of the story. 

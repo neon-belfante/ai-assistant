@@ -16,15 +16,17 @@ class textGenerator:
     def callOllama(self, prompt: str, message_hist: list, model :str, temperature: int = 0, db = None, doc_db = None):
         start_time = datetime.datetime.now()
         print(f"Starting text generator: {start_time}")
+        message_hist_augmented = message_hist.copy()
+        message_hist.append({'role': 'user', 'content':prompt})
         if db is not None:
             prompt_augmented = self.augmentWithLongTermMemory(prompt, db)
             prompt = prompt_augmented
         if doc_db is not None:
             prompt_augmented = self.augmentWithLongTermMemory(prompt, doc_db, is_document=True)
             prompt = prompt_augmented
-        message_hist.append({'role': 'user', 'content':prompt})
+        message_hist_augmented.append({'role': 'user', 'content':prompt})
         print(prompt)
-        response = ollama.chat(model=model, messages=message_hist, options={"seed": 42, "temperature": temperature})
+        response = ollama.chat(model=model, messages=message_hist_augmented, options={"seed": 42, "temperature": temperature})
         message_hist.append({'role': 'assistant', 'content': response['message']['content']})
         print(f"Ended text generator: {datetime.datetime.now()} - Elapsed time = {datetime.datetime.now() - start_time}")
         return response['message']['content']
@@ -115,7 +117,7 @@ class textGenerator:
             print(f'not valid doc type, must be one of {dict_doc_types.keys()}')
         else:
             raw_documents =  dict_doc_types[doc_type[1]].load()
-            text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+            text_splitter = CharacterTextSplitter(chunk_size=100, chunk_overlap=0)
             documents = text_splitter.split_documents(raw_documents)
             db = Chroma.from_documents(documents, OllamaEmbeddings(model="nomic-embed-text"))
         print(f"Ended loading doc: {datetime.datetime.now()}")
@@ -124,7 +126,7 @@ class textGenerator:
     def loadLongTermMemory(self, filePath: str):
         print(f"Start loading long term memory: {datetime.datetime.now()}")
         raw_documents =  TextLoader(filePath).load()
-        text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+        text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=0)
         documents = text_splitter.split_documents(raw_documents)
         db = Chroma.from_documents(documents, OllamaEmbeddings(model="nomic-embed-text"))
         print(f"Ended loading long term memory: {datetime.datetime.now()}")
