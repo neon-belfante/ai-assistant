@@ -8,17 +8,24 @@ from textGenerator import textGenerator
 from ellaAssistant import *
 from voiceGenerator import voiceGeneratorSpeecht5
 from voiceRecognition import voiceRecognitionFactory, voiceRecognitionVosk, voiceRecognitionGoogle
+from tools import toolsFactory
 import datetime
 import cairo
 import joblib
 import threading
 import time
+import numpy as np
+from PIL import Image
 
 def createStoryList(complete_story: str):
     return complete_story.split("\n\n")
 
 def openImageFromPath(image_path: str):
-    pixbuf = GdkPixbuf.Pixbuf.new_from_file(image_path)
+    doc_type = os.path.splitext(image_path)
+    if doc_type[1] == '.gif':
+        pixbuf = GdkPixbuf.PixbufAnimation.new_from_file(image_path)
+    else:
+        pixbuf = GdkPixbuf.Pixbuf.new_from_file(image_path)
     return pixbuf
 
 class Application(Gtk.Window):
@@ -31,6 +38,7 @@ class Application(Gtk.Window):
         self.defaultVoiceRecognition = list(self.voiceRecognitionFactory.register.keys())[0]
         self.voice = voiceGeneratorSpeecht5()
         self.textGenerator = textGenerator()
+        self.toolsFactory = toolsFactory(None)
         
         self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=1)
         self.add(self.main_box)
@@ -63,6 +71,7 @@ class Application(Gtk.Window):
 
         self.addSizeSlider()
         self.addCropSlider()
+        self.addTransparencySlider()
         self.addSaveMessageHistOption()
         self.addLoadMessageHistOption()
         self.addVoiceToggleOption()
@@ -75,6 +84,10 @@ class Application(Gtk.Window):
         self.createVoiceRecognitionButton()
         self.createUploadButton()
         self.createUploadDocButton()
+        self.createToolsListToggles()
+        self.setToolsListMenu()
+        self.addToolsToggleOption()
+        self.setToolsMenu()
 
         self.imgSize = 100
 
@@ -84,8 +97,9 @@ class Application(Gtk.Window):
 
         self.counterStoryParts = 0
         self.counterEnter = 0
+        self.n_tools = 0
         self.interview_history_max_length = 4
-        self.makeWindowTransparent()
+        self.makeWindowTransparent(None)
         self.setStyling()    
         
     def updateWindowVisibility(self):
@@ -99,7 +113,7 @@ class Application(Gtk.Window):
     def updateAssistant(self, assistant_name):
         self.assistant = self.assistantFactory.register[assistant_name]()
         self.imagePath = self.assistant.imagesPaths[self.assistant.standByEmotion]
-        self.interview_history = [{'role':'user', 'content':f'*For context* today is "{datetime.datetime.now().strftime("%Y %B %d, %A, %H:%M %p")}"'}]
+        self.interview_history = []
         self.isFirstTimeWritingToLongTermMemory = 0
         self.longTermMemoryPath = None
         self.longTermMemory = None
@@ -227,6 +241,22 @@ class Application(Gtk.Window):
         self.backgroundVoiceSwitchButton.set_tooltip_text("Turn on/off background voice recognition \nWhen On try say 'Hey listen' and wait for the Beep")
         self.BackgroundVoiceRecognitionOption = False
     
+    def addToolsToggleOption(self):
+        self.ToolsToggle = Gtk.Switch()
+        self.ToolsToggle.connect("notify::active", self.onToolsToggled)
+        self.ToolsToggle.set_active(False)
+        self.use_tools_flag = False
+        self.tools_list_menu_button.set_sensitive(False)
+        self.ToolsToggle.set_tooltip_text("Allows the llm to make use of tools")
+
+    def onToolsToggled(self, switch, gparam):
+        if switch.get_active():
+            self.use_tools_flag = True
+            self.tools_list_menu_button.set_sensitive(True)
+        else:
+            self.use_tools_flag = False
+            self.tools_list_menu_button.set_sensitive(False)
+    
     def addWindowVisibilityToggleOption(self):
         self.windowVisibilityToggle = Gtk.Switch()
         self.windowVisibilityToggle.connect("notify::active", self.onWindowVisibilityToggled)
@@ -297,6 +327,66 @@ class Application(Gtk.Window):
         new_assistant = assistantComboBox.get_active_text()
         if new_assistant is not None:
             self.updateAssistant(new_assistant)
+    
+    def createToolsListToggles(self):
+        self.toolsToggles = {}
+        for name_i in self.toolsFactory.register:
+            self.toolsToggles[name_i] = Gtk.Switch()
+            self.toolsToggles[name_i].connect("notify::active", self.onToolsListToggled)
+            self.toolsToggles[name_i].set_tooltip_text(self.toolsFactory.register[name_i].description)
+            self.toolsToggles[name_i].set_active(False)
+
+    def onToolsListToggled(self, switch, gparam):
+        for name_i in self.toolsFactory.register:
+            self.toolsFactory.active_tools[name_i] = self.toolsToggles[name_i].get_active()
+        self.toolsFactory.update_tools()
+
+    def setToolsListMenu(self):
+        self.tools_list_menu = Gtk.Popover()
+        self.tools_list_menu_button = Gtk.Button()
+        self.tools_list_menu_button.set_image(Gtk.Image.new_from_icon_name("open-menu-symbolic", Gtk.IconSize.BUTTON))
+        self.tools_list_menu_button.set_tooltip_text("All tools list")
+        self.tools_list_menu_button.connect("clicked", self.onToolsListMenuClicked)
+        self.toolsListMenuGrid = Gtk.Grid()
+        self.toolsListMenuGrid.set_row_spacing(1)
+        self.toolsListMenuGrid.set_column_spacing(1)
+        for i, (name_i, toggle_i) in enumerate(self.toolsToggles.items()):
+            self.toolsListMenuGrid.attach(toggle_i, 0, i, 5, 1)
+            self.toolsListMenuGrid.attach(Gtk.Label(name_i), 5, i, 5, 1)
+        
+        self.tools_list_menu.add(self.toolsListMenuGrid)
+        self.tools_list_menu.set_size_request(1, 1)
+
+    
+    def onToolsListMenuClicked(self, button):
+        self.tools_list_menu.set_relative_to(button)
+        self.tools_list_menu.show_all()
+        self.tools_list_menu.popup()
+
+    def setToolsMenu(self):
+        self.tools_menu = Gtk.Popover()
+        self.tools_menu_button = Gtk.Button()
+        self.tools_menu_button.set_image(Gtk.Image.new_from_icon_name("open-menu-symbolic", Gtk.IconSize.BUTTON))
+        self.tools_menu_button.set_tooltip_text("Tools menu")
+        self.tools_menu_button.connect("clicked", self.onToolsMenuClicked)
+        self.enterTextContainer.attach_next_to(self.tools_menu_button, self.voiceRecognitionButton,1,1,1)
+
+        self.toolsMenuGrid = Gtk.Grid()
+        self.toolsMenuGrid.set_row_spacing(1)
+        self.toolsMenuGrid.set_column_spacing(1)
+        self.toolsMenuGrid.attach(self.uploadButton, 0, 0, 50, 1)
+        self.toolsMenuGrid.attach(self.uploadDocButton, 0, 1, 50, 1)
+        self.toolsMenuGrid.attach(Gtk.Image.new_from_icon_name("applications-system-symbolic", Gtk.IconSize.BUTTON), 0, 3, 1,1)
+        self.toolsMenuGrid.attach(self.ToolsToggle, 10, 3, 35, 1)
+        self.toolsMenuGrid.attach(self.tools_list_menu_button, 45, 2, 5, 4)
+
+        self.tools_menu.add(self.toolsMenuGrid)
+        self.tools_menu.set_size_request(1, 1)
+    
+    def onToolsMenuClicked(self, button):
+        self.tools_menu.set_relative_to(button)
+        self.tools_menu.show_all()
+        self.tools_menu.popup()
 
     def setMenuButton(self):
         self.menu = Gtk.Popover()
@@ -311,21 +401,23 @@ class Application(Gtk.Window):
         self.menuGrid.set_column_spacing(1)
         self.menuGrid.attach(Gtk.Image.new_from_icon_name("zoom-in-symbolic", Gtk.IconSize.BUTTON), 0, 0, 1,1)
         self.menuGrid.attach(Gtk.Image.new_from_icon_name("image-crop-symbolic", Gtk.IconSize.BUTTON), 0, 1, 1,1)
-        self.menuGrid.attach(Gtk.Image.new_from_icon_name("audio-volume-medium", Gtk.IconSize.BUTTON), 0, 2, 1,1)
-        self.menuGrid.attach(Gtk.Image.new_from_icon_name("microphone-sensitivity-high", Gtk.IconSize.BUTTON), 0, 3, 1,1)
-        self.menuGrid.attach(Gtk.Image.new_from_icon_name("focus-windows-symbolic", Gtk.IconSize.BUTTON), 0, 4, 1,1)
-        self.menuGrid.attach(Gtk.Image.new_from_icon_name("media-floppy-symbolic", Gtk.IconSize.BUTTON), 0, 5, 1,1)
-        self.menuGrid.attach(Gtk.Image.new_from_icon_name("avatar-default", Gtk.IconSize.BUTTON), 0, 6, 1,1)
-        self.menuGrid.attach(Gtk.Image.new_from_icon_name("audio-input-microphone", Gtk.IconSize.BUTTON), 0, 7, 1,1)
+        self.menuGrid.attach(Gtk.Image.new_from_icon_name("preferences-desktop-display", Gtk.IconSize.BUTTON), 0, 2, 1,1)
+        self.menuGrid.attach(Gtk.Image.new_from_icon_name("audio-volume-medium", Gtk.IconSize.BUTTON), 0, 3, 1,1)
+        self.menuGrid.attach(Gtk.Image.new_from_icon_name("microphone-sensitivity-high", Gtk.IconSize.BUTTON), 0, 4, 1,1)
+        self.menuGrid.attach(Gtk.Image.new_from_icon_name("focus-windows-symbolic", Gtk.IconSize.BUTTON), 0, 5, 1,1)
+        self.menuGrid.attach(Gtk.Image.new_from_icon_name("media-floppy-symbolic", Gtk.IconSize.BUTTON), 0, 6, 1,1)
+        self.menuGrid.attach(Gtk.Image.new_from_icon_name("avatar-default", Gtk.IconSize.BUTTON), 0, 7, 1,1)
+        self.menuGrid.attach(Gtk.Image.new_from_icon_name("audio-input-microphone", Gtk.IconSize.BUTTON), 0, 8, 1,1)
         self.menuGrid.attach(self.imageSizeScale, 1, 0, 170, 1)
         self.menuGrid.attach(self.imageCropScale, 1, 1, 170, 1)
-        self.menuGrid.attach(self.voiceSwitchButton, 10, 2, 10, 1)
-        self.menuGrid.attach(self.backgroundVoiceSwitchButton, 10, 3, 10, 1)
-        self.menuGrid.attach(self.windowVisibilityToggle, 10, 4, 10, 1)        
-        self.menuGrid.attach(self.saveMessageHistButton, 10, 5, 1, 1)
-        self.menuGrid.attach(self.loadMessageHistButton, 12, 5, 5, 1)
-        self.menuGrid.attach(self.assistantComboBox, 10, 6, 50, 1)
-        self.menuGrid.attach(self.voiceRecognitionComboBox, 10, 7, 50, 1)
+        self.menuGrid.attach(self.TransparencyScale, 1, 2, 170, 1)
+        self.menuGrid.attach(self.voiceSwitchButton, 10, 3, 10, 1)
+        self.menuGrid.attach(self.backgroundVoiceSwitchButton, 10, 4, 10, 1)
+        self.menuGrid.attach(self.windowVisibilityToggle, 10, 5, 10, 1)        
+        self.menuGrid.attach(self.saveMessageHistButton, 10, 6, 1, 1)
+        self.menuGrid.attach(self.loadMessageHistButton, 12, 6, 5, 1)
+        self.menuGrid.attach(self.assistantComboBox, 10, 7, 50, 1)
+        self.menuGrid.attach(self.voiceRecognitionComboBox, 10, 8, 50, 1)
         
         self.menu.add(self.menuGrid)
         self.menu.set_size_request(200, 100)
@@ -413,17 +505,19 @@ class Application(Gtk.Window):
         self.uploadButton = Gtk.Button()
         self.uploadButtonIcon = Gtk.Image.new_from_icon_name("image-x-generic", Gtk.IconSize.BUTTON)
         self.uploadButton.set_image(self.uploadButtonIcon)
+        self.uploadButton.set_label(" Upload image")
+        self.uploadButton.set_always_show_image(True)
         self.uploadButton.connect("clicked", self.uploadAction)
         self.uploadButton.set_tooltip_text("Upload image as context for the assistant")
-        self.enterTextContainer.attach_next_to(self.uploadButton,  self.voiceRecognitionButton, 1, 1, 1)
 
     def createUploadDocButton(self):
         self.uploadDocButton = Gtk.Button()
         self.uploadDocButtonIcon = Gtk.Image.new_from_icon_name("document-new", Gtk.IconSize.BUTTON)
         self.uploadDocButton.set_image(self.uploadDocButtonIcon)
+        self.uploadDocButton.set_label(" Upload doc")
+        self.uploadDocButton.set_always_show_image(True)
         self.uploadDocButton.connect("clicked", self.uploadDocAction)
         self.uploadDocButton.set_tooltip_text("Upload Doc as context for the assistant")
-        self.enterTextContainer.attach_next_to(self.uploadDocButton,  self.uploadButton, 1, 1, 1)
     
     def uploadDocAction(self, button):
         self.uploadDialog = Gtk.FileChooserDialog(
@@ -475,15 +569,26 @@ class Application(Gtk.Window):
         self.imageCropScale.set_draw_value(False)
         self.imageCropScale.set_value(-100)
         self.imageCropScale.connect("value-changed", self.updateImage)
+    
+    def addTransparencySlider(self):
+        self.TransparencyScale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, -1, 0, 1)
+        self.TransparencyScale.set_draw_value(False)
+        self.TransparencyScale.set_value(-0.4)
+        self.TransparencyScale.set_tooltip_text("Select window transparency level")
+        self.TransparencyScale.connect("value-changed", self.makeWindowTransparent)
 
     def updateImage(self, scale):
         self.pixbuf = openImageFromPath(self.imagePath)
-        self.updateImageSize()
-        self.pixbuf = self.pixbuf.scale_simple(self.desired_width, self.desired_height, 2)
-        self.updateImageCrop()
-        self.cropped_pixbuf = self.pixbuf.new_subpixbuf(0, 0, self.desired_width, self.cropped_height)
-        self.image.set_from_pixbuf(self.cropped_pixbuf)
-
+        doc_type = os.path.splitext(self.imagePath)
+        if doc_type[1] == '.gif':
+            self.image.set_from_animation(self.pixbuf)
+        else:
+            self.updateImageSize()
+            self.pixbuf = self.pixbuf.scale_simple(self.desired_width, self.desired_height, 2)
+            self.updateImageCrop()
+            self.cropped_pixbuf = self.pixbuf.new_subpixbuf(0, 0, self.desired_width, self.cropped_height)
+            self.image.set_from_pixbuf(self.cropped_pixbuf)
+    
     def updateImageSize(self):
         self.imgSize = self.imageSizeScale.get_value()
         self.desired_width = self.pixbuf.get_width() * (self.imgSize/100)
@@ -495,7 +600,7 @@ class Application(Gtk.Window):
         self.cropped_height = self.pixbuf.get_height() * (self.imgSize/100)
         print(self.imgSize)
 
-    def makeWindowTransparent(self):
+    def makeWindowTransparent(self, scale):
         self.set_border_width(30)
         self.screen = self.get_screen()
         self.visual = self.screen.get_rgba_visual()
@@ -505,7 +610,7 @@ class Application(Gtk.Window):
         self.show_all()
     
     def area_draw(self, widget, cr):
-        cr.set_source_rgba(.2, .2, .2, 0.4)
+        cr.set_source_rgba(.2, .2, .2, -self.TransparencyScale.get_value())
         cr.set_operator(cairo.OPERATOR_SOURCE)
         cr.paint()
         cr.set_operator(cairo.OPERATOR_OVER)
@@ -672,20 +777,23 @@ class Application(Gtk.Window):
                 filePathToRead = None
             else:
                 prompt = text
-            result = textGenerator.callOllama(prompt=prompt, 
-                                              message_hist=interview_history, 
-                                              model=model, 
-                                              db=longTermMemory,
-                                              doc_db = docMemory)
-            return result, interview_history
+            result, n_tools = textGenerator.callOllama(prompt=prompt, 
+                                                        message_hist=interview_history, 
+                                                        model=model, 
+                                                        db=longTermMemory,
+                                                        doc_db = docMemory,
+                                                        use_tools_flag = self.use_tools_flag,
+                                                        tools_factory = self.toolsFactory)
+            return result, interview_history, filePathToRead, n_tools
 
         def callLongTermMemoryWriter(textGenerator,
                                      interview_history,
                                      interview_history_max_length,
                                      writeToLongTermMemory,
-                                     longTermMemory):
+                                     longTermMemory,
+                                     n_tools):
             if len(interview_history) > interview_history_max_length:
-                writeToLongTermMemory()
+                writeToLongTermMemory(n_tools)
                 interview_history = interview_history[-interview_history_max_length:]
                 longTermMemory = textGenerator.loadLongTermMemory(self.longTermMemoryPath)
             return interview_history, longTermMemory
@@ -700,18 +808,19 @@ class Application(Gtk.Window):
             return voiceOutputList
         
         def callGenerators():
-            result_text, interview_history = callTextGenerator(textGenerator=self.textGenerator,
-                                                          text=self.enterText.get_text(), 
-                                                          filePathToRead=self.filePathToRead, 
-                                                          model=self.assistant.modelName, 
-                                                          interview_history=self.interview_history,
-                                                          longTermMemory=self.longTermMemory,
-                                                          docMemory = self.docMemory)
+            result_text, interview_history, filePathToRead, n_tools = callTextGenerator(textGenerator=self.textGenerator,
+                                                                                        text=self.enterText.get_text(), 
+                                                                                        filePathToRead=self.filePathToRead, 
+                                                                                        model=self.assistant.modelName, 
+                                                                                        interview_history=self.interview_history,
+                                                                                        longTermMemory=self.longTermMemory,
+                                                                                        docMemory = self.docMemory)
             interview_history, longTermMemory = callLongTermMemoryWriter(textGenerator=self.textGenerator,
                                                                         interview_history=interview_history,
                                                                         interview_history_max_length=self.interview_history_max_length,
                                                                         writeToLongTermMemory=self.writeToLongTermMemory,
-                                                                        longTermMemory=self.longTermMemory)
+                                                                        longTermMemory=self.longTermMemory,
+                                                                        n_tools=n_tools)
             story_list, img_list = callEmotionGenerator(createImageListFromEmotions=self.createImageListFromEmotions,
                                                         result_text=result_text,
                                                         assistant=self.assistant)
@@ -725,7 +834,8 @@ class Application(Gtk.Window):
                 'longTermMemory' : longTermMemory,
                 'story_list' : story_list,
                 'img_list' : img_list,
-                'voiceOutputList' : voiceOutputList
+                'voiceOutputList' : voiceOutputList,
+                'filePathToRead' : filePathToRead
             }
             GLib.idle_add(lambda: updateVariables(result_dict))
             GLib.idle_add(lambda: updateGui())
@@ -737,6 +847,7 @@ class Application(Gtk.Window):
             self.story_list = result_dict['story_list']
             self.img_list = result_dict['img_list']
             self.voiceOutputList = result_dict['voiceOutputList']
+            self.filePathToRead = result_dict['filePathToRead']
         
         def updateGui():
             self.counterStoryParts = 0
@@ -771,26 +882,33 @@ class Application(Gtk.Window):
         self.assistantComboBox.set_sensitive(False)
         threading.Thread(target=callGenerators).start()
                         
-    def writeToLongTermMemory(self):
+    def writeToLongTermMemory(self, n_tools):
         if self.isFirstTimeWritingToLongTermMemory == 0:
             if self.longTermMemoryPath is None:
                 self.messagesToWrite = self.interview_history
             else:
-                self.messagesToWrite = self.interview_history[-3:]
+                self.messagesToWrite = self.interview_history[-(2+n_tools):]
             self.isFirstTimeWritingToLongTermMemory = 1
         else:
-            self.messagesToWrite = self.interview_history[-2:]
+            self.messagesToWrite = self.interview_history[-(2+n_tools):]
         if self.longTermMemoryPath is None:
             self.longTermMemoryPath = "long_term_memory_temp.txt"
             ltm = open(self.longTermMemoryPath, "a")
             ltm.truncate(0)
         else:
             ltm = open(self.longTermMemoryPath, "a")
+        
+
         for message_i in self.messagesToWrite:
             message = message_i['content'].replace('\n\n', ' ').replace('\n', ' ')
             if message_i['role'] == 'assistant':
                 role = self.assistant.modelName
                 string_to_write = f'''\n{role} said: {message}'''
+            elif message_i['role'] == 'tool':
+                if message_i['name'] in self.toolsFactory.dont_add_to_long_term_memory:
+                    string_to_write = ""
+                else:
+                    string_to_write = f'''\ntool '{message_i['name']}' said: {message}'''
             else:
                 role = message_i['role']
                 string_to_write = f'''\n\n{role} said: {message}'''

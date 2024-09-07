@@ -265,3 +265,27 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+############################################## Parler-TTS ########################
+#pip install git+https://github.com/huggingface/parler-tts.git
+import torch
+from parler_tts import ParlerTTSForConditionalGeneration
+from transformers import AutoTokenizer
+import soundfile as sf
+
+device = "cuda:0" if torch.cuda.is_available() else "cpu"
+
+model = ParlerTTSForConditionalGeneration.from_pretrained("parler-tts/parler-tts-mini-v1").to(device)
+tokenizer = AutoTokenizer.from_pretrained("parler-tts/parler-tts-mini-v1")
+
+prompt = "Oh, my goodness, Neon-san! *giggles* A B&B?! It's like... a bed and breakfast! *excitedly* You know, like a little inn or guesthouse where you can stay overnight. They usually have cozy rooms with comfy beds and delicious breakfast foods in the morning! 🥞🍳 It's a great way to experience local culture and hospitality when traveling, don't you think?! *nods* And they're usually super cute and charming, too! *blinks* Have you ever stayed at a B&B before, Neon-san?! 😃"
+description = "A female speaker delivers a slightly expressive and animated speech with a moderate speed and pitch. The recording is of very high quality, with the speaker's voice sounding clear and very close up."
+
+input_ids = tokenizer(description, return_tensors="pt").input_ids.to(device)
+prompt_input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
+
+generation = model.generate(input_ids=input_ids, prompt_input_ids=prompt_input_ids)
+audio_arr = generation.cpu().numpy().squeeze()
+sf.write("parler_tts_out.wav", audio_arr, model.config.sampling_rate)
+
+

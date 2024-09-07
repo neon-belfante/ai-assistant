@@ -18,6 +18,9 @@ class voiceGeneratorGtts:
     def __init__(self) -> None:
         self.savePath = "example.mp3"
 
+    def updateSpeaker(self, speaker:str):
+        pass
+
     def generateVoice(self, prompt: str):
         print(f"Starting voice generator: {datetime.datetime.now()}")
         prompt_actions_removed = re.sub("\*.*?\*", "", prompt)

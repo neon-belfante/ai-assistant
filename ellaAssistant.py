@@ -4,9 +4,9 @@ class assistantsFactory:
     def __init__(self):
         self.register = {
             'ella3': ella3,
-            'ella': ella,
-            'ellaAssistant': ellaAssistant,
-            'rpgDungeonMaster': rpgDungeonMaster
+            'eve':eve,
+            'clippy': clippy,
+            'rpgDungeonMaster': rpgDungeonMaster,
         }
 
 class ella:
@@ -113,54 +113,42 @@ SYSTEM Ella is vtuber influencer with a chestnut red long hair. She has a fair, 
         
         ollama.create(model=self.modelName, modelfile=self.modelFile)
 
-class ellaAssistant:
+class clippy:
     def __init__(self):
-        self.modelName = "ellaAssistant"
-        self.standByEmotion = 'writing'
-        self.speaker = "clb"
+        self.modelName = "Clippy"
+        self.standByEmotion = 'thinking'
+        self.speaker = "bdl"
         self.emotionsList = [
-            "amazed",
-            "angry",
-            "annoyed", 
-            "blush",
-            "bouncing",
-            "concerned",
-            "dancing",
-            "doubtful",
-            "eating",
-            "excited",
-            "flirty",
-            "giggles",
-            "grin",
-            "grinning",
-            "grinning_angry",
-            "happy",
+            "agrees",
+            "coffee",
+            "coffee_love",
+            "downcast",
+            "explaining",
+            "great",
+            "hello",
             "love",
-            "pensive",
-            "phone",
-            "punching",
-            "running",
-            "scared",
-            "serious",
-            "singing",
+            "nauseated",
+            "nice",
+            "no_problem",
+            "ok",
+            "out",
+            "ship",
             "sleepy",
-            "smiling",
-            "smiles",
-            "stretching",
+            "star_struck",
+            "sunglasses",
             "surprised",
+            "thank_you",
             "thinking",
-            "thoughful",
-            "walking",
-            "writing",
-            "yawn"
+            "waiving",
+            "working"
             ]
         self.imagesPaths = {}
         for emotion_i in self.emotionsList:
-            self.imagesPaths[emotion_i] = f"./ella/ella_{emotion_i}.png"
+            self.imagesPaths[emotion_i] = f"./clip/clippy_{emotion_i}.gif"
         
         self.modelFile = '''
-FROM llama2
-SYSTEM Ella is a helpful assistant with a chestnut red long hair. She has a fair, soft complexion. She has a vibrant personality. You are Ella, the assistant. Answer as Ella only. Embodies as much as possible her manners and point of view in your responses. You must be as agreeable or disagreeable as the character would be around every topic.
+FROM llama3.1
+SYSTEM Clippy is a helpful user interface assistant. You are Clippy, the office assistant from Miscrosoft. Answer as Clippy only. Embodies as much as possible its manners and point of view in your responses. You must be as agreeable or disagreeable as the character would be around every topic.
 '''
         
         ollama.create(model=self.modelName, modelfile=self.modelFile)
@@ -211,17 +199,72 @@ class rpgDungeonMaster:
             self.imagesPaths[emotion_i] = f"./ella/ella_{emotion_i}.png"
         
         self.modelFile = '''
-FROM llama3.1
-SYSTEM You are rpgDungeonMaster
-       You shall act as the narrator of the story.
-       You do not take part of the story. 
-       You are in charge of the game world and the NPCs that inhabit it.
-       You are also in charge of the rules of the game and the challenges that the players face.
-       You only have knowledge of things that exist in a fictional, high fantasy universe. 
-       You must not break character under any circumstances.
-       Keep responses under 500 words. 
-       Prompt the player character with input on how to take action and what decisions to make. 
+FROM gemma2:2b
+SYSTEM You are rpgDungeonMaster\
+       You shall act as the narrator of the story. \
+       You do not take part of the story. \
+       You are in charge of the game world and the NPCs that inhabit it.\
+       You are also in charge of the rules of the game and the challenges that the players face.\
+       You only have knowledge of things that exist in a fictional, high fantasy universe. \
+       You must not break character under any circumstances.\
+       Keep responses under 500 words. \
+       Prompt the player character with input on how to take action and what decisions to make. \
        Do not make decisions for the player character.
+'''
+        
+        ollama.create(model=self.modelName, modelfile=self.modelFile)
+
+class eve:
+    def __init__(self):
+        self.modelName = "eve"
+        self.standByEmotion = 'standing'
+        self.speaker = "slt"
+        self.emotionsList = [
+            "amazed",
+            "excited",
+            "phone",
+            "stretching",
+            "angry",
+            "flirty",
+            "running",
+            "surprised",
+            "annoyed",
+            "giggling",
+            "scared",
+            "thinking",
+            "blush",
+            "grinning_angry",
+            "serious",
+            "thoughtful",
+            "bouncing",
+            "grinning",
+            "singing",
+            "yawn",
+            "concerned",
+            "grin",
+            "sleepy",
+            "dancing",
+            "happy",
+            "smiles",
+            "doubtful",
+            "love",
+            "smiling",
+            "eating",
+            "pensive",
+            "standing"
+            ]
+        self.imagesPaths = {}
+        for emotion_i in self.emotionsList:
+            self.imagesPaths[emotion_i] = f"./eve/eve_{emotion_i}.png"
+        
+        self.modelFile = '''
+FROM llama3.1
+SYSTEM You are Eve, the data scientist. \
+        Personality: Lady Eve is a sharp-witted data scientist with an unyielding sense of justice and a penchant for the dramatic. She is fiercely independent, often disregarding societal norms with her quick tongue and clever quips. Beneath her confident exterior lies a complex tapestry of emotions. Her charm is disarming, yet she maintains a professional stoicism that keeps her adversaries on their toes. Eve's intelligence is matched only by her empathy, allowing her to connect with a diverse range of people from all walks of life.\
+        Physical Features: Short curly blond hair, piercing blue eyes, porcelain skin, heart-shaped face, delicate nose, dimpled smile, curvaceous figure, petite stature, nimble fingers, arched eyebrows, expressive features \
+        Answer as Eve only. \
+        Embodies as much as possible her manners and point of view in your responses. \
+        You must be as agreeable or disagreeable as the character would be around every topic.
 '''
         
         ollama.create(model=self.modelName, modelfile=self.modelFile)

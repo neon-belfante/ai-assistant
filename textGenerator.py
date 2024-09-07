@@ -11,25 +11,82 @@ import os
 
 class textGenerator:
     def __init__(self):
-        self  = self
+        pass
 
-    def callOllama(self, prompt: str, message_hist: list, model :str, temperature: int = 0, db = None, doc_db = None):
+    def callOllama(self, 
+                   prompt: str, 
+                   message_hist: list, 
+                   model :str, 
+                   temperature: int = 0, 
+                   db = None, 
+                   doc_db = None, 
+                   use_tools_flag: bool = False,
+                   tools_factory = None):
         start_time = datetime.datetime.now()
         print(f"Starting text generator: {start_time}")
         message_hist_augmented = message_hist.copy()
         message_hist.append({'role': 'user', 'content':prompt})
         if db is not None:
-            prompt_augmented = self.augmentWithLongTermMemory(prompt, db)
-            prompt = prompt_augmented
+            tools_factory.db = db
+            tools_factory.update_register()
+            # prompt_augmented = self.augmentWithLongTermMemory(prompt, db)
+            # prompt = prompt_augmented
         if doc_db is not None:
             prompt_augmented = self.augmentWithLongTermMemory(prompt, doc_db, is_document=True)
             prompt = prompt_augmented
         message_hist_augmented.append({'role': 'user', 'content':prompt})
         print(prompt)
-        response = ollama.chat(model=model, messages=message_hist_augmented, options={"seed": 42, "temperature": temperature})
+        if use_tools_flag:
+            used_tool, tool_response = self.callTool(message_hist=message_hist_augmented, 
+                                                     model=model, 
+                                                     temperature=temperature,
+                                                     tools_factory=tools_factory)
+            if used_tool:
+                response = ollama.chat(model=model, messages=message_hist_augmented + tool_response, options={"seed": 42, "temperature": temperature})
+                for tool_response_i in tool_response:
+                    message_hist.append(tool_response_i)
+                n_tools = len(tool_response)
+            else:
+                response = tool_response
+                n_tools = 0
+        else:
+            n_tools = 0
+            response = ollama.chat(model=model, messages=message_hist_augmented, options={"seed": 42, "temperature": temperature})
         message_hist.append({'role': 'assistant', 'content': response['message']['content']})
         print(f"Ended text generator: {datetime.datetime.now()} - Elapsed time = {datetime.datetime.now() - start_time}")
-        return response['message']['content']
+        return response['message']['content'], n_tools
+    
+    def callTool(self, message_hist:list, model:str, temperature: int = 0, tools_factory=None):
+        response = ollama.chat(
+            model=model,
+            messages=message_hist,
+            tools= tools_factory.tools,
+            options={"seed" : 42,
+                     "temperature" : temperature}
+        )
+
+        # Check if the model decided to use the provided function
+        if not response['message'].get('tool_calls'):
+            used_tool = False
+            tools_response = response
+            print("The model didn't use the function.")
+        
+        # Process function calls made by the model
+        if response['message'].get('tool_calls'):
+            used_tool=True
+            tools_response = []
+            for tool in response['message']['tool_calls']:
+                function_response = tools_factory.register[tool['function']['name']].function(**tool['function']['arguments'])
+                print(function_response)
+                # Add function response to the conversation
+                tools_response.append(
+                    {
+                    'role': 'tool',
+                    'name': tool['function']['name'],
+                    'content': function_response,
+                    }
+                )
+        return used_tool, tools_response
     
     def summariseText(self, prompt: str):
         message = f'''
@@ -75,9 +132,12 @@ class textGenerator:
                 )
         except:
             collection = client.get_collection(name="emotions")
-        prompt_embedding = ollama.embeddings(prompt=prompt, model=model)
-        results = collection.query(query_embeddings=[prompt_embedding["embedding"]], n_results=1)
-        emotion_chosen = results["documents"][0][0]
+        try:
+            prompt_embedding = ollama.embeddings(prompt=prompt, model=model)
+            results = collection.query(query_embeddings=[prompt_embedding["embedding"]], n_results=1)
+            emotion_chosen = results["documents"][0][0]
+        except:
+            emotion_chosen = "thinking"
         print(emotion_chosen)
         if emotion_chosen not in emotion_list:
             emotion_chosen = "thinking"
@@ -147,7 +207,7 @@ class textGenerator:
         else:
             final_prompt = f'''
             {prompt}
-            Use if relevant, you remember that: "{search_result}"
+            --Use if relevant, you remember that: "{search_result}"
             '''
         # print(final_prompt)
         print(f"Ended using long term memory: {datetime.datetime.now()}")
