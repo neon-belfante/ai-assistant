@@ -38,7 +38,7 @@ class Application(Gtk.Window):
         self.defaultVoiceRecognition = list(self.voiceRecognitionFactory.register.keys())[0]
         self.voice = voiceGeneratorSpeecht5()
         self.textGenerator = textGenerator()
-        self.toolsFactory = toolsFactory(None)
+        self.toolsFactory = toolsFactory(None, None)
         
         self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=1)
         self.add(self.main_box)
@@ -177,6 +177,8 @@ class Application(Gtk.Window):
             self.loadMessageHistButton.set_sensitive(True)
             self.saveMessageHistButton.set_sensitive(True)
             self.restoreButtonIcon(self.enterButton)
+            self.ToolsToggle.set_active(True)
+            self.toolsToggles['search_long_term_memory'].set_active(True)
             if self.counterEnter != 0:
                 self.nextButton.set_sensitive(True)
                 self.backButton.set_sensitive(True)
@@ -534,6 +536,8 @@ class Application(Gtk.Window):
             self.docMemory = self.textGenerator.loadDoc(self.fileDocPathToRead)
         elif self.uploadResponse == Gtk.ResponseType.CANCEL:
             print("File selection cancelled")
+        self.ToolsToggle.set_active(True)
+        self.toolsToggles['search_document'].set_active(True)
         self.uploadDialog.destroy()
 
     def uploadAction(self, button):
@@ -913,8 +917,9 @@ class Application(Gtk.Window):
                 role = message_i['role']
                 string_to_write = f'''\n\n{role} said: {message}'''
             ltm.write(str(string_to_write))
-        ltm.close()        
-            
+        ltm.close()
+        self.ToolsToggle.set_active(True)
+        self.toolsToggles['search_long_term_memory'].set_active(True)
     
     def createImageListFromEmotions(self, story_list: list[str], assistantClass):
         img_list = []

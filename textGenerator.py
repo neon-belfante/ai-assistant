@@ -32,8 +32,10 @@ class textGenerator:
             # prompt_augmented = self.augmentWithLongTermMemory(prompt, db)
             # prompt = prompt_augmented
         if doc_db is not None:
-            prompt_augmented = self.augmentWithLongTermMemory(prompt, doc_db, is_document=True)
-            prompt = prompt_augmented
+            tools_factory.doc_db = doc_db
+            tools_factory.update_register()
+            # prompt_augmented = self.augmentWithLongTermMemory(prompt, doc_db, is_document=True)
+            # prompt = prompt_augmented
         message_hist_augmented.append({'role': 'user', 'content':prompt})
         print(prompt)
         if use_tools_flag:
@@ -76,6 +78,7 @@ class textGenerator:
             used_tool=True
             tools_response = []
             for tool in response['message']['tool_calls']:
+                print(f"Calling tool {tool['function']['name']}: {datetime.datetime.now()}")
                 function_response = tools_factory.register[tool['function']['name']].function(**tool['function']['arguments'])
                 print(function_response)
                 # Add function response to the conversation
@@ -177,7 +180,7 @@ class textGenerator:
             print(f'not valid doc type, must be one of {dict_doc_types.keys()}')
         else:
             raw_documents =  dict_doc_types[doc_type[1]].load()
-            text_splitter = CharacterTextSplitter(chunk_size=100, chunk_overlap=0)
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=100, chunk_overlap=0)
             documents = text_splitter.split_documents(raw_documents)
             db = Chroma.from_documents(documents, OllamaEmbeddings(model="nomic-embed-text"))
         print(f"Ended loading doc: {datetime.datetime.now()}")

@@ -29,6 +29,8 @@ rm vosk-model-en-us-0.22.zip
 #Install required packages from requirements.txt
 pip install -r requirements.txt
 
+#Install Playwright
+# playwright install
 
 #Install Ollama
 if ! command -v ollama &> /dev/null; then
