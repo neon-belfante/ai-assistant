@@ -288,4 +288,6 @@ generation = model.generate(input_ids=input_ids, prompt_input_ids=prompt_input_i
 audio_arr = generation.cpu().numpy().squeeze()
 sf.write("parler_tts_out.wav", audio_arr, model.config.sampling_rate)
 
+## test##
+
 
