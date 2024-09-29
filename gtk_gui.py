@@ -157,7 +157,7 @@ class Application(Gtk.Window):
             interview_history = joblib.load(f"{self.loadMessageHistPath}") + self.interview_history
             longTermMemoryPathNew = f"{self.loadMessageHistPath.split('.')[0]}_long_term_memory.txt"
             try:
-                longTermMemory = self.textGenerator.loadLongTermMemory(longTermMemoryPathNew)
+                longTermMemory = self.textGenerator.loadLongTermMemory(longTermMemoryPathNew, self.longTermMemory)
             except:
                 longTermMemory = None
                 print("No Longer Term Memory provided")
@@ -799,7 +799,7 @@ class Application(Gtk.Window):
             if len(interview_history) > interview_history_max_length:
                 writeToLongTermMemory(n_tools)
                 interview_history = interview_history[-interview_history_max_length:]
-                longTermMemory = textGenerator.loadLongTermMemory(self.longTermMemoryPath)
+                longTermMemory = textGenerator.loadLongTermMemory(self.longTermMemoryPath, self.longTermMemory)
             return interview_history, longTermMemory
         
         def callEmotionGenerator(createImageListFromEmotions, result_text, assistant):

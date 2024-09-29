@@ -30,7 +30,7 @@ class toolsFactory:
             'get_screenshot_description' : get_screenshot_description(),
             'search_google_news' : search_google_news(),
             # 'get_pokemon_screen_description' : get_pokemon_screen_description(),
-            'search_google_scholar':search_google_scholar(),
+            # 'search_google_scholar':search_google_scholar(),
             'search_academic_papers':search_academic_papers(),
             'search_long_term_memory' : search_long_term_memory(self.db),
             'search_document' : search_document(self.doc_db)
@@ -132,7 +132,8 @@ class search_long_term_memory:
         self.type = 'function'
         self.name = 'search_long_term_memory'
         self.description = f"""\
-        search long term memory to remember previous conversation around a topic or phrase\
+        Remember previous conversation between user and agent around a topic or phrase, to be used as context for answering current and ongoing conversations.\
+        Not always the conversation remembered will be related to the topic being currently discussed, in this case it is recommended to just ignore the results remembered. 
         """
         self.parameters = {
             'type': 'object',
@@ -284,7 +285,7 @@ class search_academic_papers:
         self.type = 'function'
         self.name = 'search_academic_papers'
         self.description = f"""\
-        return excerpts of academic papers related to the topic searched with the objective of answered the question to answer.\
+        return excerpts of academic papers related to the topic searched with the objective of answering a specific question.\
         """
         self.parameters = {
             'type': 'object',
@@ -358,11 +359,3 @@ class search_academic_papers:
         
         return search_result
     
-
-# question = "How many carbon bamboo farms capture?"
-# topic_to_search = "bomboo carbon capture"
-
-# search_academy = search_google_scholar()
-# search_result = search_academy.function(question, topic_to_search)
-# search_result
-
