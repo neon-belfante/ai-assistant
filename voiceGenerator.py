@@ -15,8 +15,9 @@ import datetime
 import numpy as np
 
 class voiceGeneratorGtts:
-    def __init__(self) -> None:
+    def __init__(self, speaker = None) -> None:
         self.savePath = "example.mp3"
+        self.speaker = None
 
     def updateSpeaker(self, speaker:str):
         pass
@@ -43,14 +44,38 @@ class voiceGeneratorGtts:
 #         print(f"Ended voice generator: {datetime.datetime.now()}")
 #         return [self.savePath]
 
+class voiceGeneratorMeloTTS:
+    def __init__(self, speaker, speed = 1) -> None:
+        from MeloTTS.melo.api import TTS
+        self.speed = speed
+        self.model = TTS(language='EN', device='auto')
+        self.output_path = 'example.mp3'
+        self.speakers = {'EN-US': 0, 
+                         'EN-BR': 1, 
+                         'EN_INDIA': 2, 
+                         'EN-AU': 3, 
+                         'EN-Default': 4}
+        self.speaker = speaker
+        self.speaker_code = self.speakers[self.speaker]
+    
+    def generateVoice(self, prompt: str):
+        start_time = datetime.datetime.now()
+        print(f"Starting voice generator: {start_time}")
+        prompt_actions_removed = re.sub("\*.*?\*", "", prompt)
+        self.model.tts_to_file(prompt_actions_removed, self.speaker_code, self.output_path, self.speed)
+        list_outputs = [self.output_path]
+        print(f"Ended voice generator: {datetime.datetime.now()}, elapsed time: {datetime.datetime.now() - start_time}")
+        return list_outputs
+
 class voiceGeneratorSpeecht5:
-    def __init__(self):
+    def __init__(self, speaker):
         self.savePath = "example"
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.processor = SpeechT5Processor.from_pretrained("microsoft/speecht5_tts")
         self.model = SpeechT5ForTextToSpeech.from_pretrained("microsoft/speecht5_tts").to(self.device)
         self.vocoder = SpeechT5HifiGan.from_pretrained("microsoft/speecht5_hifigan").to(self.device)
         self.embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation", trust_remote_code=True)
+        self.speaker = speaker
         self.speakers = {
             'awb': 0,     # Scottish male
             'bdl': 1138,  # US male
@@ -60,15 +85,11 @@ class voiceGeneratorSpeecht5:
             'rms': 5667,  # US male
             'slt': 6799   # US female
         }
-        self.speaker = 'slt'
         self.speaker_code = self.speakers[self.speaker]
     
-    def updateSpeaker(self, speaker:str):
-        self.speaker = speaker
-        self.speaker_code = self.speakers[self.speaker]
-        
     def generateVoice(self, prompt: str):
-        print(f"Starting voice generator: {datetime.datetime.now()}")
+        start_time = datetime.datetime.now()
+        print(f"Starting voice generator: {start_time}")
         # preprocess text
         prompt_actions_removed = re.sub("\*.*?\*", "", prompt)
         inputs = self.processor(text=prompt_actions_removed, return_tensors="pt").to(self.device)
@@ -93,7 +114,7 @@ class voiceGeneratorSpeecht5:
                 speech = self.model.generate_speech(torch.tensor(np.array([input_i])), speaker_embeddings, vocoder=self.vocoder)
                 sf.write(f"{self.savePath}{i}.mp3", speech.cpu().numpy(), samplerate=16000)
                 list_outputs.append(f"{self.savePath}{i}.mp3")
-        print(f"Ended voice generator: {datetime.datetime.now()}")
+        print(f"Ended voice generator: {datetime.datetime.now()}, elapsed time: {datetime.datetime.now() - start_time}")
         return list_outputs
         
 

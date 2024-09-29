@@ -2,7 +2,7 @@
 
 # Clone the GitHub repository (replace <username> and <repository> with your GitHub username and repository name)
 sudo apt install git -y &&\
-git clone https://github.com/neon-belfante/ai-assistant.git
+git clone --recurse-submodules https://github.com/neon-belfante/ai-assistant.git
 cd ai-assistant
 
 sudo apt install python3.10-venv -y &&\
@@ -31,6 +31,9 @@ pip install -r requirements.txt
 
 #Install Playwright
 # playwright install
+
+# Download MeloTTS requirements
+python -m unidic download
 
 #Install Ollama
 if ! command -v ollama &> /dev/null; then

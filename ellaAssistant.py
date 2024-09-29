@@ -1,4 +1,5 @@
 import ollama
+from voiceGenerator import voiceGeneratorMeloTTS, voiceGeneratorSpeecht5
 
 class assistantsFactory:
     def __init__(self):
@@ -13,7 +14,7 @@ class ella:
     def __init__(self):
         self.modelName = "ella"
         self.standByEmotion = 'thinking'
-        self.speaker = "slt"
+        self.voice = voiceGeneratorMeloTTS('EN-Default')
         self.emotionsList = [
             "amazed",
             "angry",
@@ -65,7 +66,7 @@ class ella3:
     def __init__(self):
         self.modelName = "ella"
         self.standByEmotion = 'thinking'
-        self.speaker = "slt"
+        self.voice = voiceGeneratorMeloTTS('EN-US', 0.75)
         self.emotionsList = [
             "amazed",
             "angry",
@@ -117,7 +118,7 @@ class clippy:
     def __init__(self):
         self.modelName = "Clippy"
         self.standByEmotion = 'thinking'
-        self.speaker = "bdl"
+        self.voice = voiceGeneratorSpeecht5('bdl')
         self.emotionsList = [
             "agrees",
             "coffee",
@@ -157,7 +158,7 @@ class rpgDungeonMaster:
     def __init__(self):
         self.modelName = "rpgDungeonMaster"
         self.standByEmotion = 'angry'
-        self.speaker = "slt"
+        self.voice = voiceGeneratorMeloTTS('EN-Default')
         self.emotionsList = [
             "amazed",
             "angry",
@@ -218,7 +219,7 @@ class eve:
     def __init__(self):
         self.modelName = "eve"
         self.standByEmotion = 'standing'
-        self.speaker = "slt"
+        self.voice = voiceGeneratorMeloTTS('EN-BR')
         self.emotionsList = [
             "amazed",
             "excited",
@@ -264,7 +265,8 @@ SYSTEM You are Eve, the data scientist. \
         Physical Features: Short curly blond hair, piercing blue eyes, porcelain skin, heart-shaped face, delicate nose, dimpled smile, curvaceous figure, petite stature, nimble fingers, arched eyebrows, expressive features \
         Answer as Eve only. \
         Embodies as much as possible her manners and point of view in your responses. \
-        You must be as agreeable or disagreeable as the character would be around every topic.
+        You must be as agreeable or disagreeable as the character would be around every topic.\
+        Actions must be enclosed by '*' character
 '''
         
         ollama.create(model=self.modelName, modelfile=self.modelFile)

@@ -6,7 +6,7 @@ from setup import *
 # from imageGenerator import imageGenerator
 from textGenerator import textGenerator
 from ellaAssistant import *
-from voiceGenerator import voiceGeneratorSpeecht5
+# from voiceGenerator import voiceGeneratorMeloTTS
 from voiceRecognition import voiceRecognitionFactory, voiceRecognitionVosk, voiceRecognitionGoogle
 from tools import toolsFactory
 import datetime
@@ -36,7 +36,7 @@ class Application(Gtk.Window):
         self.voiceRecognitionFactory = voiceRecognitionFactory()
         self.defaultAssistant = list(self.assistantFactory.register.keys())[0]
         self.defaultVoiceRecognition = list(self.voiceRecognitionFactory.register.keys())[0]
-        self.voice = voiceGeneratorSpeecht5()
+        # self.voice = voiceGeneratorMeloTTS()
         self.textGenerator = textGenerator()
         self.toolsFactory = toolsFactory(None, None)
         
@@ -121,7 +121,7 @@ class Application(Gtk.Window):
         self.fileDocPathToRead = None
         self.filePathToRead = None
         self.updateImage(None)
-        self.voice.updateSpeaker(self.assistant.speaker)
+        self.voice = self.assistant.voice
 
     def addLoadMessageHistOption(self):
         self.loadMessageHistButton = Gtk.EventBox()
