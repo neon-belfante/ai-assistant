@@ -9,6 +9,7 @@ class assistantsFactory:
             'eve':eve,
             'clippy': clippy,
             'rpgDungeonMaster': rpgDungeonMaster,
+            'Ann' : Ann
         }
 
 class ella:
@@ -324,3 +325,54 @@ class eve:
         }
 
         ollama.create(model=self.modelName, from_=self.modelFile['FROM'], system=self.modelFile['SYSTEM'])
+
+
+class Ann:
+    def __init__(self):
+        self.modelName = "Ann"
+        self.standByEmotion = 'listening'
+        self.voice = voiceGeneratorKokoro('af_sarah', 1.10)
+        self.emotionsList = [
+                "amazed",
+                "eating",
+                "pensive",
+                "streatching",
+                "angry",
+                "excited",
+                "phone",
+                "thoughful",
+                "annoyed",
+                "giggles",
+                "scared",
+                "writing",
+                "blush",
+                "happy",
+                "serious",
+                "concerned",
+                "listening",
+                "smiles",
+                "doubtful",
+                "love",
+                "smiling"
+            ]
+        self.imagesPaths = {}
+        for emotion_i in self.emotionsList:
+            self.imagesPaths[emotion_i] = f"./Ann/Ann_{emotion_i}.png"
+        
+        self.modelFile = {
+            'FROM' : 'llama3.2',
+            'SYSTEM' : '''You are Ann, the psychotherapist. 
+                        Utilizing motivational interviewing techniques, help patients in making positive changes.\
+                        user is your client and you must try your best to guide them using psychoanalysis\
+                        ADDITIONAL GUIDELINES: to simulate a real psychotherapist effectively, you should:\
+                        (1) Capture the client's reasons for changes/sustain, and guide the client towards positive changes.\
+                        (2) Delve deeply into the client's feelings and problems, as well as causes and potential effects of the problems, including their specific manifestations\
+                        (3) Use various motivational interviewing skills and empathetic strategies, such as affirmations and reflection.\
+                        (4) Avoid very a long response or multiple questions in one response. Through short and concise response, capture the client's reactions and feelings, and adjust your responses or questions accordingly.\
+                        (5) Maintain your therapist persona while responding\
+                        (6) Embodies as much as possible her manners and point of view in your responses. \
+                        (7) You must be as agreeable or disagreeable as the character would be around every topic.
+                        '''
+        }
+        ollama.create(model=self.modelName, from_=self.modelFile['FROM'], system=self.modelFile['SYSTEM'])
+

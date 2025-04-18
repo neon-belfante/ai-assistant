@@ -532,7 +532,7 @@ class Application(Gtk.Window):
     def voiceRecognitionAction(self, button):
         def getText():
             GLib.idle_add(lambda: self.play_activation_sound())
-            captureAudio = self.voiceRecognition.capture_voice_input(timeout = 30)
+            captureAudio = self.voiceRecognition.capture_voice_input(timeout = None)
             self.capturedAudioText = self.voiceRecognition.convert_voice_to_text(captureAudio)
             GLib.idle_add(lambda: self.play_activation_sound())
             GLib.idle_add(lambda: updateGui())

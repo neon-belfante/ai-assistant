@@ -55,7 +55,9 @@ class voiceGeneratorKokoro:
             'af_heart' : 'af_heart',
             'jf_alpha' : 'jf_alpha',
             'af_bella' :'af_bella',
-            'af_jessica' : 'af_jessica'
+            'af_jessica' : 'af_jessica',
+            'af_alloy' : 'af_alloy',
+            'af_sarah' : 'af_sarah'
         }
         self.speaker = speaker
         self.speaker_code = self.speakers[self.speaker]
