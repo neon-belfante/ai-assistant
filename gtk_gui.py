@@ -1,6 +1,7 @@
 import gi
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GdkPixbuf, GLib, Gdk
+gi.require_version("WebKit2", "4.0")
+from gi.repository import Gtk, GdkPixbuf, GLib, Gdk, WebKit2
 import os
 from setup import *
 # from imageGenerator import imageGenerator
@@ -9,6 +10,7 @@ from ellaAssistant import *
 # from voiceGenerator import voiceGeneratorMeloTTS
 from voiceRecognition import voiceRecognitionFactory, voiceRecognitionVosk, voiceRecognitionGoogle
 from tools import toolsFactory
+from markdown_it import MarkdownIt
 import datetime
 import cairo
 import joblib
@@ -16,9 +18,63 @@ import threading
 import time
 import numpy as np
 from PIL import Image
+import re
 
 def createStoryList(complete_story: str):
-    return complete_story.split("\n\n")
+    def transformPlainText(plainText):
+        md = MarkdownIt()
+        html_output = md.render(plainText)
+        styled_html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {{
+                        background-color: #333333;
+                        color: #ffffff;
+                        font-family: Arial, sans-serif;
+                        font-size: 90%;
+                    }}
+                    h1 {{
+                        color: #ffffff;
+                    }}
+                </style>
+            </head>
+            <body>
+                {html_output}
+            </body>
+            </html>
+            """
+        return styled_html
+    
+    def text_spliter(complete_story):
+        code_blocks = re.findall(r"(```[\s\S]*?```)", complete_story)
+        placeholder_dict = {}
+        if len(code_blocks) >= 1:
+            for i, code_block in enumerate(code_blocks):
+                placeholder = f"<<<PLACEHOLDER{i}>>>"
+                placeholder_dict[placeholder] = code_block
+                complete_story = complete_story.replace(code_block, placeholder)
+        split_text = complete_story.split("\n\n")
+        
+        if len(split_text) <= 1:
+            split_text = complete_story.split("\r\n\r\n")
+        
+        if len(code_blocks) >= 1:
+            for placeholder, code_block in placeholder_dict.items():
+                split_text = [part.replace(placeholder, code_block) for part in split_text]
+        return split_text
+    
+    split_text = text_spliter(complete_story)
+    html_text_list = []
+    for text_i in split_text:
+        html_text_list.append(transformPlainText(text_i))
+    
+    result_dict = {
+        'plain_text_list' : split_text,
+        'html_list' : html_text_list
+    }
+    return result_dict
 
 def openImageFromPath(image_path: str):
     doc_type = os.path.splitext(image_path)
@@ -633,12 +689,12 @@ class Application(Gtk.Window):
 
     def createTextResultsBox(self):
         self.scroll = Gtk.ScrolledWindow()
-        self.scroll.set_min_content_height(80)
+        self.scroll.set_min_content_height(100)
         self.scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         self.textGeneratorResultContainer.pack_start(self.scroll, True, True, 0)
 
-        self.result = Gtk.TextView()
-        self.result.set_wrap_mode(Gtk.WrapMode.WORD)
+        self.result = WebKit2.WebView()
+        # self.result.set_wrap_mode(Gtk.WrapMode.WORD)
         self.scroll.add(self.result)
         self.show_all()       
     
@@ -673,13 +729,13 @@ class Application(Gtk.Window):
 
     def actionBack(self, widget):
         if self.counterStoryParts == 0:
-            self.counterStoryParts = len(self.story_list) - 1
+            self.counterStoryParts = len(self.story_list['plain_text_list']) - 1
         else:
             self.counterStoryParts -= 1
 
         def callVoiceGenerator():
             if self.voiceOptionOn:
-                voiceOutputList = self.voice.generateVoice(self.story_list[self.counterStoryParts])
+                voiceOutputList = self.voice.generateVoice(self.story_list['plain_text_list'][self.counterStoryParts])
             else: 
                 voiceOutputList = None
             GLib.idle_add(lambda: updateGui(voiceOutputList))
@@ -688,8 +744,9 @@ class Application(Gtk.Window):
             self.voiceOutputList = voiceOutputList
             self.imagePath = self.img_list[self.counterStoryParts]
             self.updateImage(None)
-            self.result.get_buffer().set_text(self.story_list[self.counterStoryParts])
-            self.pagesIndicatorNewText.set_text("{}/{}".format(self.counterStoryParts + 1, len(self.story_list)))
+            # self.result.get_buffer().set_text(self.story_list[self.counterStoryParts])
+            self.result.load_html(self.story_list['html_list'][self.counterStoryParts], "file://")
+            self.pagesIndicatorNewText.set_text("{}/{}".format(self.counterStoryParts + 1, len(self.story_list['plain_text_list'])))
             self.playAudio(self.voiceOutputList)
             self.restoreButtonIcon(self.backButton)
             self.enterButton.set_sensitive(True)
@@ -713,14 +770,14 @@ class Application(Gtk.Window):
         threading.Thread(target=callVoiceGenerator).start()
 
     def actionNext(self, widget):
-        if self.counterStoryParts == len(self.story_list) - 1:
+        if self.counterStoryParts == len(self.story_list['plain_text_list']) - 1:
             self.counterStoryParts = 0
         else:
             self.counterStoryParts += 1
 
         def callVoiceGenerator():
             if self.voiceOptionOn:
-                voiceOutputList = self.voice.generateVoice(self.story_list[self.counterStoryParts])
+                voiceOutputList = self.voice.generateVoice(self.story_list['plain_text_list'][self.counterStoryParts])
             else: 
                 voiceOutputList = None
             GLib.idle_add(lambda: updateGui(voiceOutputList))
@@ -729,8 +786,9 @@ class Application(Gtk.Window):
             self.voiceOutputList = voiceOutputList
             self.imagePath = self.img_list[self.counterStoryParts]
             self.updateImage(None)
-            self.result.get_buffer().set_text(self.story_list[self.counterStoryParts])
-            self.pagesIndicatorNewText.set_text("{}/{}".format(self.counterStoryParts + 1, len(self.story_list)))
+            # self.result.get_buffer().set_text(self.story_list[self.counterStoryParts])
+            self.result.load_html(self.story_list['html_list'][self.counterStoryParts], "file://")
+            self.pagesIndicatorNewText.set_text("{}/{}".format(self.counterStoryParts + 1, len(self.story_list['plain_text_list'])))
             self.playAudio(self.voiceOutputList)
             self.restoreButtonIcon(self.nextButton)
             self.enterButton.set_sensitive(True)
@@ -741,7 +799,7 @@ class Application(Gtk.Window):
             self.voiceRecognitionComboBox.set_sensitive(True)
             self.assistantComboBox.set_sensitive(True)
             self.reenableToggle(self.backgroundVoiceSwitchButton)
-            if self.counterStoryParts == len(self.story_list) - 1:
+            if self.counterStoryParts == len(self.story_list['plain_text_list']) - 1:
                 self.play_activation_sound()
                 time.sleep(0.5)
                 self.play_activation_sound()
@@ -804,11 +862,11 @@ class Application(Gtk.Window):
         
         def callEmotionGenerator(createImageListFromEmotions, result_text, assistant):
             story_list = createStoryList(result_text)
-            img_list = createImageListFromEmotions(story_list, assistant)
+            img_list = createImageListFromEmotions(story_list['plain_text_list'], assistant)
             return story_list, img_list
         
         def callVoiceGenerator(voice, story_list):
-            voiceOutputList = voice.generateVoice(prompt=story_list[0])
+            voiceOutputList = voice.generateVoice(prompt=story_list['plain_text_list'][0])
             return voiceOutputList
         
         def callGenerators():
@@ -858,9 +916,10 @@ class Application(Gtk.Window):
             if self.counterEnter == 0:
                 self.createTextResultsBox()
                 self.createBackAndNextButtons()
-            self.pagesIndicatorNewText.set_text("{}/{}".format(self.counterStoryParts + 1, len(self.story_list)))
+            self.pagesIndicatorNewText.set_text("{}/{}".format(self.counterStoryParts + 1, len(self.story_list['html_list'])))
             self.counterEnter = 1
-            self.result.get_buffer().set_text(self.story_list[0])
+            # self.result.get_buffer().set_text(self.story_list[0])
+            self.result.load_html(self.story_list['html_list'][0], "file://")
             self.imagePath = self.img_list[0]
             self.updateImage(None)
             self.playAudio(self.voiceOutputList)

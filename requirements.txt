@@ -63,7 +63,7 @@ nvidia-cusparse-cu12==12.1.0.106
 nvidia-nccl-cu12==2.19.3
 nvidia-nvjitlink-cu12==12.4.99
 nvidia-nvtx-cu12==12.1.105
-ollama==0.3.2
+ollama==0.4.7
 orjson==3.10.0
 packaging==23.2
 pandas==2.2.1
@@ -120,5 +120,6 @@ chromadb==0.4.15
 docx2txt == 0.8
 langchain_experimental == 0.0.65
 selenium==4.25.0
+markdown_it==3.0.0
 # unstructured == 0.15.0
 # python-docx == 1.1.2

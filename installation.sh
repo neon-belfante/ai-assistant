@@ -17,6 +17,7 @@ source $venv_name/bin/activate
 #Install GTK
 sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 -y &&\
 sudo apt install libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-4.0 -y &&\
+sudo apt install libwebkit2gtk-4.0-dev gir1.2-webkit2-4.0 &&\
 sudo apt install python3-pyaudio -y &&\
 sudo apt install portaudio19-dev -y
 

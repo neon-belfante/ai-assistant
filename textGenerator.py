@@ -49,7 +49,7 @@ class textGenerator:
                     message_hist.append(tool_response_i)
                 n_tools = len(tool_response)
             else:
-                response = tool_response
+                response = ollama.chat(model=model, messages=message_hist_augmented, options={"seed": 42, "temperature": temperature})
                 n_tools = 0
         else:
             n_tools = 0
@@ -78,17 +78,28 @@ class textGenerator:
             used_tool=True
             tools_response = []
             for tool in response['message']['tool_calls']:
-                print(f"Calling tool {tool['function']['name']}: {datetime.datetime.now()}")
-                function_response = tools_factory.register[tool['function']['name']].function(**tool['function']['arguments'])
-                print(function_response)
-                # Add function response to the conversation
-                tools_response.append(
-                    {
-                    'role': 'tool',
-                    'name': tool['function']['name'],
-                    'content': function_response,
-                    }
-                )
+                if tool['function']['name'] in tools_factory.active_tools.keys() and tools_factory.active_tools[tool['function']['name']]:
+                    print(f"Calling tool {tool['function']['name']}: {datetime.datetime.now()}")
+                    function_response = tools_factory.register[tool['function']['name']].function(**tool['function']['arguments'])
+                    print(function_response)
+                    # Add function response to the conversation
+                    tools_response.append(
+                        {
+                        'role': 'tool',
+                        'name': tool['function']['name'],
+                        'content': function_response,
+                        }
+                    )
+                else:
+                    function_response = f"There is no tool {tool['function']['name']} available to call"
+                    print(function_response)
+                    tools_response.append(
+                        {
+                        'role': 'tool',
+                        'name': tool['function']['name'],
+                        'content': function_response,
+                        }
+                    )
         return used_tool, tools_response
     
     def summariseText(self, prompt: str):

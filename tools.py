@@ -132,8 +132,8 @@ class search_long_term_memory:
         self.type = 'function'
         self.name = 'search_long_term_memory'
         self.description = f"""\
-        Remember previous conversation between user and agent around a topic or phrase, to be used as context for answering current and ongoing conversations.\
-        Not always the conversation remembered will be related to the topic being currently discussed, in this case it is recommended to just ignore the results remembered. 
+        Search provided memory document and retrieve fragments relate to a topic or phrase as context.\
+        Result may not be related to the topic searched, in this case, ignore the results.\
         """
         self.parameters = {
             'type': 'object',
@@ -151,7 +151,7 @@ class search_long_term_memory:
             search_result = ""
         else:
             docs = self.db.similarity_search(prompt_to_search)
-            search_result = ""
+            search_result = "You remember from previous chat:"
             for i, result_i in enumerate(docs[:n_results]):
                 search_result = f"{search_result}\n{i+1}. {result_i.page_content}"
                 i = i +1
@@ -299,7 +299,7 @@ class search_academic_papers:
                     'description': 'The topic or phrase to search in google scholar'
                 }
             },
-            'required': ['topic_to_search'],
+            'required': ['question_to_answer','topic_to_search'],
           }
     
     def function(self, question_to_answer: str, topic_to_search: str):
