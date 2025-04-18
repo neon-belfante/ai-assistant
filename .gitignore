@@ -1,6 +1,9 @@
+*.mp3
+
 ai-environment/
 temp/
 model/
+
 long_term_memory_temp.txt
 
 prompt_ideas.txt
@@ -15,4 +18,4 @@ aiAssistant.desktop
 tkinter_gui.py
 
 
-*.mp3
+
