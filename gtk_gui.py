@@ -4,11 +4,9 @@ gi.require_version("WebKit2", "4.0")
 from gi.repository import Gtk, GdkPixbuf, GLib, Gdk, WebKit2
 import os
 from setup import *
-# from imageGenerator import imageGenerator
 from textGenerator import textGenerator
 from ellaAssistant import *
-# from voiceGenerator import voiceGeneratorMeloTTS
-from voiceRecognition import voiceRecognitionFactory, voiceRecognitionVosk, voiceRecognitionGoogle
+from voiceRecognition import voiceRecognitionFactory
 from tools import toolsFactory
 from markdown_it import MarkdownIt
 import datetime
@@ -92,7 +90,6 @@ class Application(Gtk.Window):
         self.voiceRecognitionFactory = voiceRecognitionFactory()
         self.defaultAssistant = list(self.assistantFactory.register.keys())[0]
         self.defaultVoiceRecognition = list(self.voiceRecognitionFactory.register.keys())[0]
-        # self.voice = voiceGeneratorMeloTTS()
         self.textGenerator = textGenerator()
         self.toolsFactory = toolsFactory(None, None)
         

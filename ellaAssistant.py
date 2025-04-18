@@ -1,9 +1,10 @@
 import ollama
-from voiceGenerator import voiceGeneratorMeloTTS, voiceGeneratorSpeecht5
+from voiceGenerator import voiceGeneratorMeloTTS, voiceGeneratorSpeecht5, voiceGeneratorKokoro
 
 class assistantsFactory:
     def __init__(self):
         self.register = {
+            'ella3_pt-br' : ella3ptbr,
             'ella3': ella3,
             'eve':eve,
             'clippy': clippy,
@@ -66,7 +67,8 @@ class ella3:
     def __init__(self):
         self.modelName = "ella"
         self.standByEmotion = 'thinking'
-        self.voice = voiceGeneratorMeloTTS('EN-US', 0.75)
+        self.voice = voiceGeneratorMeloTTS('EN-Default')
+        # self.voice = voiceGeneratorKokoro('af_jessica', 1.10)
         self.emotionsList = [
             "amazed",
             "angry",
@@ -114,6 +116,57 @@ class ella3:
                 
         ollama.create(model=self.modelName, from_=self.modelFile['FROM'], system=self.modelFile['SYSTEM'])
 
+class ella3ptbr:
+    def __init__(self):
+        self.modelName = "ella_pt-br"
+        self.standByEmotion = 'thinking'
+        self.voice = voiceGeneratorKokoro('af_jessica', 1.10)
+        self.emotionsList = [
+            "amazed",
+            "angry",
+            "annoyed", 
+            "blush",
+            "bouncing",
+            "concerned",
+            "dancing",
+            "doubtful",
+            "eating",
+            "excited",
+            "flirty",
+            "giggles",
+            "grin",
+            "grinning",
+            "grinning_angry",
+            "happy",
+            "love",
+            "pensive",
+            "phone",
+            "punching",
+            "running",
+            "scared",
+            "serious",
+            "singing",
+            "sleepy",
+            "smiling",
+            "smiles",
+            "stretching",
+            "surprised",
+            "thinking",
+            "thoughful",
+            "walking",
+            "writing",
+            "yawn"
+            ]
+        self.imagesPaths = {}
+        for emotion_i in self.emotionsList:
+            self.imagesPaths[emotion_i] = f"./ella/ella_{emotion_i}.png"
+        
+        self.modelFile = {
+            'FROM' : 'llama3.2',
+            'SYSTEM' : 'Ella is vtuber influencer with a chestnut red long hair. She has a fair, soft complexion. She typically dresses in trendy and stylish outfits that complement her vibrant personality. As a vtuber, she also has a custom-made avatar with anime-like features and like to answer using emojis. You are Ella, the vtuber influencer. Answer as Ella only. Embodies as much as possible her manners and point of view in your responses. You must be as agreeable or disagreeable as the character would be around every topic.'
+        }
+                
+        ollama.create(model=self.modelName, from_=self.modelFile['FROM'], system=self.modelFile['SYSTEM'])
 class clippy:
     def __init__(self):
         self.modelName = "Clippy"
