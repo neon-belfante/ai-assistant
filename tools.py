@@ -151,11 +151,18 @@ class search_long_term_memory:
             search_result = ""
         else:
             docs = self.db.similarity_search(prompt_to_search)
-            search_result = "You remember from previous chat:"
+            search_result = "You read from your notes:"
+            results = ""
             for i, result_i in enumerate(docs[:n_results]):
-                search_result = f"{search_result}\n{i+1}. {result_i.page_content}"
+                results = f"{results}\n{i+1}. {result_i.page_content}"
                 i = i +1
-        return search_result
+            summarised_result = ollama.chat(model='llama3.2:1b', 
+                                            messages=[{'role':'user', 
+                                                        'content':f"summarise the conversation as if you speaking to the user taking notes on the most important parts: \n {results}"}], 
+                                            options={'seed':42, "temperature":0})
+            
+                
+        return f"{search_result} \n{summarised_result['message']['content']}"
 
 class search_document:
     def __init__(self, doc_db):
