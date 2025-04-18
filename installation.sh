@@ -2,7 +2,7 @@
 
 # Clone the GitHub repository (replace <username> and <repository> with your GitHub username and repository name)
 sudo apt install git -y &&\
-git clone https://github.com/neon-belfante/ai-assistant.git
+git clone --recurse-submodules https://github.com/neon-belfante/ai-assistant.git
 cd ai-assistant
 
 sudo apt install python3.10-venv -y &&\
@@ -17,6 +17,7 @@ source $venv_name/bin/activate
 #Install GTK
 sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 -y &&\
 sudo apt install libgirepository1.0-dev gcc libcairo2-dev pkg-config python3-dev gir1.2-gtk-4.0 -y &&\
+sudo apt install libwebkit2gtk-4.0-dev gir1.2-webkit2-4.0 &&\
 sudo apt install python3-pyaudio -y &&\
 sudo apt install portaudio19-dev -y
 
@@ -31,6 +32,9 @@ pip install -r requirements.txt
 
 #Install Playwright
 # playwright install
+
+# Download MeloTTS requirements
+python -m unidic download
 
 #Install Ollama
 if ! command -v ollama &> /dev/null; then

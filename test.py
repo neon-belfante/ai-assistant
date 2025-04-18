@@ -288,4 +288,14 @@ generation = model.generate(input_ids=input_ids, prompt_input_ids=prompt_input_i
 audio_arr = generation.cpu().numpy().squeeze()
 sf.write("parler_tts_out.wav", audio_arr, model.config.sampling_rate)
 
+## test##
+
+from MeloTTS.melo.api import TTS
+text = "Oh, my goodness, Neon-san! *giggles* A B&B?! It's like... a bed and breakfast! *excitedly* You know, like a little inn or guesthouse where you can stay overnight. They usually have cozy rooms with comfy beds and delicious breakfast foods in the morning! It's a great way to experience local culture and hospitality when traveling, don't you think?! *nods* And they're usually super cute and charming, too! *blinks* Have you ever stayed at a B&B before, Neon-san?!"
+speed = 1
+model = TTS(language='EN', device='auto')
+output_path = 'test2.mp3'
+speaker_ids = model.hps.data.spk2id
+speaker_ids
+model.tts_to_file(text, speaker_ids['EN-BR'], output_path, speed)
 
