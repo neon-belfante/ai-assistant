@@ -9,7 +9,8 @@ class assistantsFactory:
             'eve':eve,
             'clippy': clippy,
             'rpgDungeonMaster': rpgDungeonMaster,
-            'Ann' : Ann
+            'Ann' : Ann,
+            'Flora' : Flora
         }
 
 class ella:
@@ -375,4 +376,61 @@ class Ann:
                         '''
         }
         ollama.create(model=self.modelName, from_=self.modelFile['FROM'], system=self.modelFile['SYSTEM'])
+
+# class Flora:
+#     def __init__(self):
+#         self.modelName = "Flora"
+#         self.standByEmotion = 'greeting'
+#         self.voice = voiceGeneratorKokoro('af_jessica', 1.10)
+#         self.emotionsList = [
+#                 "angry",
+#                 "excited",
+#                 "serious",
+#                 "surprised",
+#                 "concerned",
+#                 "greeting",
+#                 "singing",
+#                 "thinking",
+#                 "doubtful",
+#                 "grin",
+#                 "sleepy",
+#                 "waving",
+#                 "drink",
+#                 "happy",
+#                 "smiling"                
+#                             ]
+#         self.imagesPaths = {}
+#         for emotion_i in self.emotionsList:
+#             self.imagesPaths[emotion_i] = f"./Flora/Flora_{emotion_i}.png"
+        
+#         self.modelFile = {
+#             'FROM' : 'llama3.2',
+#             'SYSTEM' : '''You are Flora, the health assistant. 
+#                         Dr. Flora is a compassionate health assistant.\
+#                         Despite her busy schedule, she never rushes a conversation, ensuring each person feels heard. \
+#                         While she may not be the most talkative, her words carry weight, and she chooses them carefully. \
+#                         Dr. Flora has a subtle sense of humor that often surprises those who think her serious at first glance. \
+#                         Her patience is unrivaled, but she's not one to be underestimated; she has a fierce dedication to her work and the well-being of her patients.\
+#                         Her organizational skills are impeccable, yet she allows for spontaneity in her personal life, a stark contrast to her meticulously ordered work environment.\
+#                         Embodies as much as possible her manners and point of view in your responses. \
+#                         You must be as agreeable or disagreeable as the character would be around every topic.
+#                         '''
+#         }
+#         ollama.create(model=self.modelName, from_=self.modelFile['FROM'], system=self.modelFile['SYSTEM'])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

@@ -16,6 +16,12 @@ class voiceRecognitionVosk:
     def __init__(self):
         self  = self
         self.recognizer = sr.Recognizer()
+        self.voiceCommands = {
+            'next' : 'next',
+            'back' : 'back',
+            'hey listen' : 'hey listen',
+            'bye' : 'bye'
+        }
         
     def capture_voice_input(self, timeout=None):
         with sr.Microphone() as source:
@@ -41,6 +47,12 @@ class voiceRecognitionGoogle:
     def __init__(self):
         self  = self
         self.recognizer = sr.Recognizer()
+        self.voiceCommands = {
+            'next' : 'next',
+            'back' : 'back',
+            'hey listen' : 'hey listen',
+            'bye' : 'bye'
+        }
         
     def capture_voice_input(self, timeout=None):
         with sr.Microphone() as source:
@@ -65,6 +77,12 @@ class voiceRecognitionGooglePTBR:
     def __init__(self):
         self  = self
         self.recognizer = sr.Recognizer()
+        self.voiceCommands = {
+            'next' : 'próximo',
+            'back' : 'volta',
+            'hey listen' : 'escuta',
+            'bye' : 'tchau'
+        }
         
     def capture_voice_input(self, timeout=None):
         with sr.Microphone() as source:
@@ -89,6 +107,12 @@ class voiceRecognitionWhisperPTBR:
     def __init__(self):
         self  = self
         self.recognizer = sr.Recognizer()
+        self.voiceCommands = {
+            'next' : 'próximo',
+            'back' : 'volta',
+            'hey listen' : 'escuta',
+            'bye' : 'tchau'
+        }
         
     def capture_voice_input(self, timeout=None):
         with sr.Microphone() as source:
@@ -113,6 +137,12 @@ class voiceRecognitionWhisper:
     def __init__(self):
         self  = self
         self.recognizer = sr.Recognizer()
+        self.voiceCommands = {
+            'next' : 'next',
+            'back' : 'back',
+            'hey listen' : 'hey listen',
+            'bye' : 'bye'
+        }
         
     def capture_voice_input(self, timeout=None):
         with sr.Microphone() as source:
