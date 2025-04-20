@@ -22,12 +22,6 @@ sudo apt install python3-pyaudio -y &&\
 sudo apt install portaudio19-dev -y &&\
 sudo apt install ffmpeg -y
 
-# Install vosk voice recognition model
-wget https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip &&\
-unzip vosk-model-en-us-0.22.zip &&\
-mv vosk-model-en-us-0.22 model &&\
-rm vosk-model-en-us-0.22.zip
-
 #Install required packages from requirements.txt
 pip install -r requirements.txt
 
