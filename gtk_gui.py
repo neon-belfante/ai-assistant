@@ -4,11 +4,9 @@ gi.require_version("WebKit2", "4.0")
 from gi.repository import Gtk, GdkPixbuf, GLib, Gdk, WebKit2
 import os
 from setup import *
-# from imageGenerator import imageGenerator
 from textGenerator import textGenerator
 from ellaAssistant import *
-# from voiceGenerator import voiceGeneratorMeloTTS
-from voiceRecognition import voiceRecognitionFactory, voiceRecognitionVosk, voiceRecognitionGoogle
+from voiceRecognition import voiceRecognitionFactory
 from tools import toolsFactory
 from markdown_it import MarkdownIt
 import datetime
@@ -92,7 +90,6 @@ class Application(Gtk.Window):
         self.voiceRecognitionFactory = voiceRecognitionFactory()
         self.defaultAssistant = list(self.assistantFactory.register.keys())[0]
         self.defaultVoiceRecognition = list(self.voiceRecognitionFactory.register.keys())[0]
-        # self.voice = voiceGeneratorMeloTTS()
         self.textGenerator = textGenerator()
         self.toolsFactory = toolsFactory(None, None)
         
@@ -491,30 +488,30 @@ class Application(Gtk.Window):
                 captureAudio = self.voiceRecognition.capture_voice_input(timeout = 2)
                 capturedAudioText = self.voiceRecognition.convert_voice_to_text(captureAudio)
                 process_voice_command(capturedAudioText)
-            if "hey listen" in capturedAudioText.lower():
+            if self.voiceRecognition.voiceCommands["hey listen"] in capturedAudioText.lower():
                 GLib.idle_add(lambda: self.voiceRecognitionAction(None))
-            elif "back" in capturedAudioText.lower():
+            elif self.voiceRecognition.voiceCommands["back"] in capturedAudioText.lower():
                 self.play_activation_sound()
                 GLib.idle_add(lambda: self.actionBack(None))
-            elif "next" in capturedAudioText.lower():
+            elif self.voiceRecognition.voiceCommands["next"] in capturedAudioText.lower():
                 self.play_activation_sound()
                 GLib.idle_add(lambda: self.actionNext(None))
-            elif "bye" in capturedAudioText.lower():
+            elif self.voiceRecognition.voiceCommands["bye"] in capturedAudioText.lower():
                 self.play_activation_sound()
                 GLib.idle_add(lambda: self.onWindowDestroy(None))
             self.backgroundVoiceRecognitionThreadEvent.set()
                     
         def process_voice_command(text):
-            if "hey listen" in text.lower():
+            if self.voiceRecognition.voiceCommands["hey listen"] in text.lower():
                 print("Say your prompt")
                 self.BackgroundVoiceRecognitionOption = False
-            elif "back" in text.lower():
+            elif self.voiceRecognition.voiceCommands["back"] in text.lower():
                 print("back")
                 self.BackgroundVoiceRecognitionOption = False
-            elif "next" in text.lower():
+            elif self.voiceRecognition.voiceCommands["next"] in text.lower():
                 print("next")
                 self.BackgroundVoiceRecognitionOption = False
-            elif "bye" in text.lower():
+            elif self.voiceRecognition.voiceCommands["bye"] in text.lower():
                 print("Bye!")
                 self.BackgroundVoiceRecognitionOption = False
             else:
@@ -535,7 +532,7 @@ class Application(Gtk.Window):
     def voiceRecognitionAction(self, button):
         def getText():
             GLib.idle_add(lambda: self.play_activation_sound())
-            captureAudio = self.voiceRecognition.capture_voice_input(timeout = 30)
+            captureAudio = self.voiceRecognition.capture_voice_input(timeout = None)
             self.capturedAudioText = self.voiceRecognition.convert_voice_to_text(captureAudio)
             GLib.idle_add(lambda: self.play_activation_sound())
             GLib.idle_add(lambda: updateGui())

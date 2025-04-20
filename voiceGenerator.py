@@ -1,14 +1,9 @@
-# import sys
-# sys.path.append('/home/neon/bark')
-
-# from bark import SAMPLE_RATE, generate_audio, preload_models
 from scipy.io.wavfile import write as write_wav
 from IPython.display import Audio
 from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
 from datasets import load_dataset
 import torch
 import soundfile as sf
-import os
 from gtts import gTTS
 import re
 import datetime
@@ -30,31 +25,13 @@ class voiceGeneratorGtts:
         print(f"Ended voice generator: {datetime.datetime.now()}")
         return [self.savePath]
 
-# class voiceGeneratorBark:
-#     def __init__(self):
-#         self.savePath = 'bark_generation.wav'
-#         os.environ["SUNO_OFFLOAD_CPU"] = "True"
-#         os.environ["SUNO_USE_SMALL_MODELS"] = "True"
-#         preload_models()
-        
-#     def generateVoice(self, prompt: str):
-#         print(f"Starting voice generator: {datetime.datetime.now()}")
-#         audio_array = generate_audio(prompt, history_prompt='v2/en_speaker_9')
-#         write_wav(self.savePath, SAMPLE_RATE, audio_array)
-#         print(f"Ended voice generator: {datetime.datetime.now()}")
-#         return [self.savePath]
-
 class voiceGeneratorMeloTTS:
     def __init__(self, speaker, speed = 1) -> None:
         from MeloTTS.melo.api import TTS
         self.speed = speed
         self.model = TTS(language='EN', device='auto')
         self.output_path = 'example.mp3'
-        self.speakers = {'EN-US': 0, 
-                         'EN-BR': 1, 
-                         'EN_INDIA': 2, 
-                         'EN-AU': 3, 
-                         'EN-Default': 4}
+        self.speakers = self.model.hps.data.spk2id
         self.speaker = speaker
         self.speaker_code = self.speakers[self.speaker]
     
@@ -64,6 +41,63 @@ class voiceGeneratorMeloTTS:
         prompt_actions_removed = re.sub("\*.*?\*", "", prompt)
         self.model.tts_to_file(prompt_actions_removed, self.speaker_code, self.output_path, self.speed)
         list_outputs = [self.output_path]
+        print(f"Ended voice generator: {datetime.datetime.now()}, elapsed time: {datetime.datetime.now() - start_time}")
+        return list_outputs
+
+class voiceGeneratorKokoro:
+    def __init__(self, speaker, speed = 1) -> None:
+        from kokoro import KPipeline
+        self.speed = speed
+        self.savePath = "example"
+        self.model = KPipeline(lang_code='p')
+        self.speakers = {
+            'pf_dora' : 'pf_dora',
+            'af_heart' : 'af_heart',
+            'jf_alpha' : 'jf_alpha',
+            'af_bella' :'af_bella',
+            'af_jessica' : 'af_jessica',
+            'af_alloy' : 'af_alloy',
+            'af_sarah' : 'af_sarah'
+        }
+        self.speaker = speaker
+        self.speaker_code = self.speakers[self.speaker]
+    
+    def generateVoice(self, prompt: str):
+        start_time = datetime.datetime.now()
+        print(f"Starting voice generator: {start_time}")
+        emoji_pattern = re.compile("["
+                                    u"\U0001F600-\U0001F64F"  # emoticons
+                                    u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+                                    u"\U0001F680-\U0001F6FF"  # transport & map symbols
+                                    u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                                    u"\U00002500-\U00002BEF"  # chinese char
+                                    u"\U00002702-\U000027B0"
+                                    u"\U000024C2-\U0001F251"
+                                    u"\U0001f926-\U0001f937"
+                                    u"\U00010000-\U0010ffff"
+                                    u"\u2640-\u2642" 
+                                    u"\u2600-\u2B55"
+                                    u"\u200d"
+                                    u"\u23cf"
+                                    u"\u23e9"
+                                    u"\u231a"
+                                    u"\ufe0f"  # dingbats
+                                    u"\u3030"
+                                    "]+", flags=re.UNICODE)
+
+        prompt = emoji_pattern.sub('', prompt)
+        prompt_actions_removed = re.sub("\*.*?\*", "", prompt)
+        generator = self.model(
+                        prompt_actions_removed, 
+                        voice=self.speaker_code,
+                        speed=self.speed, 
+                        split_pattern=r'\n+'
+                    )
+        list_outputs = []
+        for i, (gs, ps, audio) in enumerate(generator):
+            output_path = f'{self.savePath}{i}.mp3'
+            sf.write(output_path, audio, 24000)
+            list_outputs.append(output_path )
         print(f"Ended voice generator: {datetime.datetime.now()}, elapsed time: {datetime.datetime.now() - start_time}")
         return list_outputs
 
