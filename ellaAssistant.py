@@ -9,8 +9,7 @@ class assistantsFactory:
             'eve':eve,
             'clippy': clippy,
             'rpgDungeonMaster': rpgDungeonMaster,
-            'Ann' : Ann,
-            'Flora' : Flora
+            'Ann' : Ann
         }
 
 class ella:
